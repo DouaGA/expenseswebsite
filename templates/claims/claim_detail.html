@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<style>
+    #detail-map {
+        height: 400px;
+        width: 100%;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .claim-info {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .info-label {
+        font-weight: bold;
+        color: #495057;
+    }
+    .info-value {
+        margin-bottom: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Détails de la réclamation #{{ claim.id }}</h2>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div id="detail-map"></div>
+            
+            <div class="claim-info">
+                <h4>{{ claim.title }}</h4>
+                <hr>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="info-label">Type</div>
+                        <div class="info-value">{{ claim.claim_type.name|default:"Non spécifié" }}</div>
+                        
+                        <div class="info-label">Statut</div>
+                        <div class="info-value">
+                            <span class="badge 
+                                {% if claim.status == 'pending' %}bg-warning
+                                {% elif claim.status == 'accepted' %}bg-success
+                                {% else %}bg-danger{% endif %}">
+                                {{ claim.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="info-label">Date de création</div>
+                        <div class="info-value">{{ claim.created_at|date:"d/m/Y H:i" }}</div>
+                        
+                        <div class="info-label">Municipalité</div>
+                        <div class="info-value">{{ claim.municipality.name|default:"Non spécifié" }}</div>
+                    </div>
+                </div>
+                
+                <div class="info-label">Description</div>
+                <div class="info-value">{{ claim.description|linebreaksbr|default:"Aucune description" }}</div>
+                
+                {% if claim.admin_comment %}
+                <div class="info-label">Commentaire admin</div>
+                <div class="info-value">{{ claim.admin_comment|linebreaksbr }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    Actions
+                </div>
+                <div class="card-body">
+                    {% if can_edit %}
+                    <a href="/admin/claims/claim/{{ claim.id }}/change/" 
+                       class="btn btn-primary btn-sm mb-2">
+                        <i class="fas fa-edit"></i> Modifier dans l'admin
+                    </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'claims:map' %}" class="btn btn-secondary btn-sm mb-2">
+                        <i class="fas fa-map"></i> Retour à la carte
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const mapData = JSON.parse('{{ map_data|escapejs }}');
+    
+    if (mapData.lat && mapData.lng) {
+        const map = L.map('detail-map').setView([mapData.lat, mapData.lng], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        
+        const marker = L.marker([mapData.lat, mapData.lng]).addTo(map);
+        marker.bindPopup(`
+            <b>${mapData.title}</b><br>
+            Type: ${mapData.type}<br>
+            Statut: ${mapData.status}
+        `).openPopup();
+    } else {
+        document.getElementById('detail-map').innerHTML = `
+            <div class="alert alert-info text-center py-5">
+                <i class="fas fa-map-marker-alt fa-3x mb-3"></i>
+                <p>Localisation non disponible</p>
+            </div>
+        `;
+    }
+});
+</script>
+{% endblock %}
