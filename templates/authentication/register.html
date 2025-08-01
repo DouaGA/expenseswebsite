@@ -1,71 +1,377 @@
 {% extends 'base_auth.html' %}
 {% load static %}
 
+{% block extra_css %}
+<style>
+    :root {
+        --primary: #2E8B57;  /* Vert écologique */
+        --primary-light: #7AC291;
+        --primary-dark: #1F6B3D;
+        --secondary: #DF2E38; /* Rouge pour les alertes */
+        --white: #FFFFFF;
+        --light-bg: #F8FCFA; /* Fond plus clair */
+        --dark-text: #2C3E50;
+    }
+    
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-color: var(--light-bg);
+        color: var(--dark-text);
+        overflow-x: hidden;
+    }
+    
+    /* Animation de fond */
+    .bg-animation {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -2;
+        background: linear-gradient(135deg, #EFFAF5 0%, #DEF5EB 100%);
+    }
+    
+    /* Particules flottantes */
+    .particles-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        overflow: hidden;
+    }
+    
+    .particle {
+        position: absolute;
+        background-color: var(--primary-light);
+        border-radius: 50%;
+        opacity: 0.6;
+        animation: float linear infinite;
+    }
+    
+    /* Animation de flottement */
+    @keyframes float {
+        0% {
+            transform: translate(0, -10%) rotate(0deg);
+            opacity: 0;
+        }
+        10% {
+            opacity: 0.7;
+        }
+        90% {
+            opacity: 0.7;
+        }
+        100% {
+            transform: translate(var(--end-x), 100vh) rotate(360deg);
+            opacity: 0;
+        }
+    }
+    
+    /* Carte d'authentification */
+    .auth-card {
+        border-radius: 20px;
+        box-shadow: 0 5px 25px rgba(46, 139, 87, 0.1);
+        border: none;
+        background-color: rgba(255, 255, 255, 0.95);
+        transition: all 0.3s ease;
+        overflow: hidden;
+        width: 100%;
+        max-width: 500px;
+        margin: 0 auto;
+    }
+    
+    .auth-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(46, 139, 87, 0.15);
+    }
+    
+    .auth-header {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white;
+        padding: 1.5rem;
+        text-align: center;
+    }
+    
+    .auth-logo {
+        width: 70px;
+        height: auto;
+        margin-bottom: 10px;
+    }
+    
+    .btn-primary {
+        background-color: var(--primary) !important;
+        border-color: var(--primary) !important;
+        padding: 10px 25px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        background-color: var(--primary-dark) !important;
+        transform: translateY(-2px);
+    }
+    
+    /* Input styles */
+    .form-control {
+        border-radius: 8px;
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        transition: all 0.3s;
+    }
+    
+    .form-control:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 0.25rem rgba(46, 139, 87, 0.25);
+    }
+    
+    /* Solution temporaire si le logo ne charge pas */
+    .temp-logo {
+        display: inline-block;
+        width: 70px;
+        height: 70px;
+        background-color: white;
+        border-radius: 50%;
+        line-height: 70px;
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: var(--primary);
+    }
+    
+    /* Lien "Déjà un compte" */
+    .auth-link {
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s;
+    }
+    
+    .auth-link:hover {
+        color: var(--primary-dark);
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
 
-{% block content %}
+{% block auth_content %}
+<!-- Animation de fond -->
+<div class="bg-animation"></div>
+<div class="particles-container" id="particles"></div>
 
-<div class="row">
-  <div class="col-md-4"></div>
-  <div class="col-md-4">
-    <div class="card mt-5">
-
-
-      <div class="card-body">
-        <div class="card-title py-3">
-          <h4>Register for a free account</h4>
+<div class="container d-flex align-items-center justify-content-center min-vh-100 py-4">
+    <div class="auth-card">
+        <div class="auth-header">
+            <img src="{% static 'img/logo-white.png' %}" alt="Logo GreenMap" class="auth-logo" onerror="this.onerror=null; this.parentNode.innerHTML='<div class=\'temp-logo\'>GM</div><h4>Inscription</h4>'">
+            <h4>Créer un compte</h4>
         </div>
-        <form action="{% url 'register' %}" method="post">
-          {% csrf_token %}
-
-          {% include 'partials/_messages.html' %}
-          <div class="form-group">
-            <input
-              type="text"
-              name="username"
-              placeholder="username"
-              id="usernameField"
-              value="{{fieldValues.username}}"
-              class="form-control form-control-sm"
-            />
-          </div>
-          <div class="invalid_feedback invalid-feedback" style="display:none">
-          </div>
-          <p class="text-sm text-success usernameSuccessOutput"></p>
-          <div class="form-group">
-            <input
-              type="email"
-              name="email"
-              placeholder="Email"
-              class="form-control form-control-sm"
-              id="emailField"
-
-              value="{{fieldValues.email}}"
-            />
-          </div>
-
-          <div class="emailFeedBackArea invalid-feedback" style="display:none">
-          </div>
-          <div class="form-group">
-            <input
-              type="password"
-              name="password"
-              placeholder="Password"
-              class="form-control form-control-sm"
-              id="passwordField"
-            />
-            <small class="float-right py-3 showPasswordToggle">SHOW</small>
-          </div>
-          <input type="submit" value="Register" class="btn btn-block btn-primary submit-btn" />
-        </form>
-
-      </div>
-
-      </div>
+        <div class="card-body p-4 p-md-5">
+            {% include 'partials/_messages.html' %}
+            
+            <form method="post" action="{% url 'register' %}">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label for="first_name" class="form-label">Prénom</label>
+                    <input type="text" class="form-control" id="first_name" name="first_name" 
+                           placeholder="Votre prénom" required value="{{ fieldValues.first_name }}">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="last_name" class="form-label">Nom</label>
+                    <input type="text" class="form-control" id="last_name" name="last_name" 
+                           placeholder="Votre nom" required value="{{ fieldValues.last_name }}">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="username" class="form-label">Nom d'utilisateur</label>
+                    <input type="text" class="form-control" id="username" name="username" 
+                           placeholder="Choisissez un nom d'utilisateur" required value="{{ fieldValues.username }}">
+                    <div class="invalid-feedback username-feedback" style="display: none;"></div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" name="email" 
+                           placeholder="Votre email" required value="{{ fieldValues.email }}">
+                    <div class="invalid-feedback email-feedback" style="display: none;"></div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="password" class="form-label">Mot de passe</label>
+                    <input type="password" class="form-control" id="password" name="password" 
+                           placeholder="Créez un mot de passe" required>
+                    <small class="text-muted">Minimum 6 caractères</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="password2" class="form-label">Confirmez le mot de passe</label>
+                    <input type="password" class="form-control" id="password2" name="password2" 
+                           placeholder="Confirmez votre mot de passe" required>
+                </div>
+                
+                <div class="form-check mb-4">
+                    <input class="form-check-input" type="checkbox" id="terms" required>
+                    <label class="form-check-label" for="terms">
+                        J'accepte les <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">conditions d'utilisation</a>
+                    </label>
+                </div>
+                
+                <div class="d-grid mb-3">
+                    <button type="submit" class="btn btn-primary">S'inscrire</button>
+                </div>
+                
+                <div class="text-center">
+                    Vous avez déjà un compte ? <a href="{% url 'login' %}" class="auth-link">Connectez-vous</a>
+                </div>
+            </form>
+        </div>
     </div>
-  </div>
-  <div class="col-md-4"></div>
 </div>
 
-<script src="{% static 'js/register.js' %}"></script>
+<!-- Modal pour les CGU -->
+<div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="termsModalLabel">Conditions d'utilisation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Conditions d'utilisation de GreenMap...</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-{% endblock content %}
+<script>
+// Création des particules flottantes
+function createParticles() {
+    const container = document.getElementById('particles');
+    const particleCount = window.innerWidth < 768 ? 15 : 30;
+    
+    for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        
+        // Position de départ aléatoire
+        const startX = Math.random() * 100;
+        
+        // Position de fin aléatoire (±20% de la position de départ)
+        const endX = startX + (Math.random() * 40 - 20);
+        
+        // Taille aléatoire
+        const size = 5 + Math.random() * 15;
+        
+        // Durée d'animation
+        const duration = 10 + Math.random() * 20;
+        
+        // Délai aléatoire
+        const delay = Math.random() * 15;
+        
+        // Opacité aléatoire
+        const opacity = 0.2 + Math.random() * 0.5;
+        
+        // Appliquer les styles
+        particle.style.width = `${size}px`;
+        particle.style.height = `${size}px`;
+        particle.style.setProperty('--end-x', `${endX}%`);
+        particle.style.left = `${startX}%`;
+        particle.style.animationDuration = `${duration}s`;
+        particle.style.animationDelay = `${delay}s`;
+        particle.style.opacity = opacity;
+        
+        container.appendChild(particle);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', createParticles);
+window.addEventListener('resize', function() {
+    document.getElementById('particles').innerHTML = '';
+    createParticles();
+});
+
+// Validation en temps réel du nom d'utilisateur
+document.getElementById('username').addEventListener('blur', function() {
+    const username = this.value;
+    const feedback = document.querySelector('.username-feedback');
+    
+    if (username.length < 3) {
+        feedback.textContent = "Le nom d'utilisateur doit contenir au moins 3 caractères";
+        feedback.style.display = 'block';
+        this.classList.add('is-invalid');
+        return;
+    }
+    
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        feedback.textContent = "Seuls les lettres, chiffres et _ sont autorisés";
+        feedback.style.display = 'block';
+        this.classList.add('is-invalid');
+        return;
+    }
+    
+    // Vérification via AJAX si le nom d'utilisateur existe déjà
+    fetch("{% url 'validate_username' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({'username': username})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.username_error) {
+            feedback.textContent = data.username_error;
+            feedback.style.display = 'block';
+            this.classList.add('is-invalid');
+        } else {
+            feedback.style.display = 'none';
+            this.classList.remove('is-invalid');
+        }
+    });
+});
+
+// Validation en temps réel de l'email
+document.getElementById('email').addEventListener('blur', function() {
+    const email = this.value;
+    const feedback = document.querySelector('.email-feedback');
+    
+    try {
+        validateEmail(email); // Fonction de validation basique
+        
+        // Vérification via AJAX si l'email existe déjà
+        fetch("{% url 'validate_email' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({'email': email})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.email_error) {
+                feedback.textContent = data.email_error;
+                feedback.style.display = 'block';
+                this.classList.add('is-invalid');
+            } else {
+                feedback.style.display = 'none';
+                this.classList.remove('is-invalid');
+            }
+        });
+    } catch (e) {
+        feedback.textContent = "Email invalide";
+        feedback.style.display = 'block';
+        this.classList.add('is-invalid');
+    }
+});
+
+function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!re.test(email)) throw new Error("Email invalide");
+}
+</script>
+{% endblock %}

@@ -18,7 +18,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.contrib.auth.views import LoginView
 from django.views.decorators.csrf import csrf_protect
-
+from django.contrib.auth import authenticate, login
 class EmailValidationView(View):
     def post(self, request):
         data = json.loads(request.body)
@@ -43,51 +43,81 @@ class UsernameValidationView(View):
 
 class RegistrationView(View):
     def get(self, request):
+        if request.user.is_authenticated:
+            return redirect('claims_dashboard')
         return render(request, 'authentication/register.html')
 
     def post(self, request):
-        username = request.POST['username']
-        email = request.POST['email']
-        password = request.POST['password']
+        # Récupération des données du formulaire
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        password2 = request.POST.get('password2')
 
-        context = {'fieldValues': request.POST}
+        context = {
+            'fieldValues': request.POST
+        }
 
-        if not User.objects.filter(username=username).exists() and not User.objects.filter(email=email).exists():
-            if len(password) < 6:
-                messages.error(request, 'Le mot de passe doit contenir au moins 6 caractères')
-                return render(request, 'authentication/register.html', context)
+        # Validation des données
+        if not username or not email or not password or not password2:
+            messages.error(request, 'Tous les champs sont obligatoires')
+            return render(request, 'authentication/register.html', context)
 
-            user = User.objects.create_user(username=username, email=email)
-            user.set_password(password)
-            user.is_active = False
-            user.save()
-            if not hasattr(user, 'userprofile'):
-                UserProfile.objects.create(user=user)
+        if password != password2:
+            messages.error(request, 'Les mots de passe ne correspondent pas')
+            return render(request, 'authentication/register.html', context)
 
-            current_site = get_current_site(request)
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = account_activation_token.make_token(user)
+        if len(password) < 6:
+            messages.error(request, 'Le mot de passe doit contenir au moins 6 caractères')
+            return render(request, 'authentication/register.html', context)
 
-            activate_url = f'http://{current_site.domain}{reverse("activate", kwargs={"uidb64": uid, "token": token})}'
+        if User.objects.filter(username=username).exists():
+            messages.error(request, "Ce nom d'utilisateur est déjà pris")
+            return render(request, 'authentication/register.html', context)
 
-            email_subject = 'Activation de votre compte'
-            email_body = render_to_string('authentication/activate_email.html', {
-                'user': user,
-                'activate_url': activate_url,
-            })
-            
-            email = EmailMessage(
-                email_subject,
-                email_body,
-                'noreply@trulyclaims.com',
-                [email],
-            )
-            email.send(fail_silently=False)
-            messages.success(request, 'Compte créé avec succès. Veuillez vérifier votre email pour l\'activation.')
-            return render(request, 'authentication/register.html')
+        if User.objects.filter(email=email).exists():
+            messages.error(request, "Cet email est déjà utilisé")
+            return render(request, 'authentication/register.html', context)
 
-        messages.error(request, 'Une erreur est survenue')
-        return render(request, 'authentication/register.html', context)
+        # Création de l'utilisateur
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            first_name=first_name,
+            last_name=last_name
+        )
+        user.set_password(password)
+        user.is_active = False  # L'utilisateur doit activer son compte par email
+        user.save()
+
+        # Création du profil utilisateur
+        UserProfile.objects.create(user=user)
+
+        # Envoi de l'email d'activation
+        current_site = get_current_site(request)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = account_activation_token.make_token(user)
+
+        activate_url = f'http://{current_site.domain}{reverse("activate", kwargs={"uidb64": uid, "token": token})}'
+
+        email_subject = 'Activez votre compte GreenMap'
+        email_body = render_to_string('authentication/activate_email.html', {
+            'user': user,
+            'activate_url': activate_url,
+        })
+        
+        email = EmailMessage(
+            email_subject,
+            email_body,
+            'noreply@greenmap.com',
+            [email],
+        )
+        email.send(fail_silently=False)
+
+        messages.success(request, 'Compte créé avec succès. Veuillez vérifier votre email pour activer votre compte.')
+        return redirect('login')
 
 class VerificationView(View):
     def get(self, request, uidb64, token):
@@ -111,7 +141,6 @@ class VerificationView(View):
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             messages.error(request, 'Lien d\'activation invalide')
             return redirect('login')
-
 class LoginView(View):
     template_name = 'authentication/login.html'
     
@@ -121,7 +150,7 @@ class LoginView(View):
     
     def get(self, request):
         if request.user.is_authenticated:
-            return redirect('dashboard')
+            return redirect('claims_dashboard')  # Changed from 'dashboard' to 'claims_dashboard'
         return render(request, self.template_name)
     
     def post(self, request):
@@ -132,11 +161,11 @@ class LoginView(View):
         
         if user is not None:
             login(request, user)
-            return redirect('dashboard')
+            return redirect('claims_dashboard')  # Changed from 'dashboard' to 'claims_dashboard'
         else:
             messages.error(request, "Invalid username or password")
             return render(request, self.template_name)
-
+        
 class LogoutView(View):
     @method_decorator(login_required)
     def post(self, request):

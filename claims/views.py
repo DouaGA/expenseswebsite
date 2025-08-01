@@ -27,6 +27,7 @@ from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from datetime import datetime  # Add this import if not already present
 from django.db.models.functions import TruncDate
+from django.contrib.auth import authenticate, login
 import logging
 logger = logging.getLogger(__name__)
 
