@@ -25,6 +25,8 @@ from openpyxl import Workbook
 from io import BytesIO
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
+from datetime import datetime  # Add this import if not already present
+from django.db.models.functions import TruncDate
 
 
 def export_claims(request):
@@ -157,16 +159,20 @@ def claim_stats(request):
         date_counts[current_date.strftime('%Y-%m-%d')] = 0
         current_date += timedelta(days=1)
     
+    # Modified query to avoid using extra()
     daily_claims = (
         Claim.objects
         .filter(created_at__date__gte=start_date, created_at__date__lte=end_date)
-        .extra({'date': "date(created_at)"})
+        .annotate(date=TruncDate('created_at'))
         .values('date')
         .annotate(count=Count('id'))
+        .order_by('date')
     )
     
     for item in daily_claims:
-        date_counts[item['date']] = item['count']
+        # No need to parse the date - it's already a date object
+        date_str = item['date'].strftime('%Y-%m-%d')
+        date_counts[date_str] = item['count']
     
     sorted_dates = sorted(date_counts.items())
     dates = [date for date, count in sorted_dates]
@@ -196,7 +202,6 @@ def claim_stats(request):
         'dates': dates,
         'daily_counts': daily_counts,
         'new_reclamation': new_reclamation,
-        'total_claims': total_claims,
         'reclamations': Claim.objects.all().order_by('-created_at')[:10],
         'avg_processing_time': avg_processing_time,
     }
@@ -207,28 +212,33 @@ def claim_detail(request, claim_id):
     try:
         claim = get_object_or_404(Claim, id=claim_id)
         
-        # Vérifier si l'utilisateur est autorisé à voir ce signalement
-        if not request.user.is_staff and claim.user != request.user:
+        # Vérifier les permissions
+        if not request.user.is_staff and claim.created_by != request.user:
             return render(request, 'errors/403.html', status=403)
             
+        # Préparer les données pour la carte
+        map_data = {
+            'lat': claim.location_lat,
+            'lng': claim.location_lng,
+            'title': claim.title,
+            'type': claim.claim_type.name if claim.claim_type else 'Non spécifié',
+            'status': claim.get_status_display()
+        }
+        
         context = {
             'claim': claim,
+            'map_data': json.dumps(map_data),
             'page_title': f'Détails de la réclamation #{claim.id}',
-            'can_edit': request.user.is_staff or claim.user == request.user
+            'can_edit': request.user.is_staff
         }
         return render(request, 'claims/claim_detail.html', context)
         
     except Exception as e:
-        # Loguer l'erreur pour le débogage
-        import logging
-        logger = logging.getLogger(__name__)
         logger.error(f"Erreur dans claim_detail: {str(e)}")
-        
-        # Retourner une réponse d'erreur générique
         return render(request, 'errors/500.html', {
-            'error_message': "Une erreur s'est produite lors du chargement des détails du signalement."
+            'error_message': "Une erreur s'est produite lors du chargement des détails."
         }, status=500)
-
+    
 @require_GET
 def api_claim_details(request, claim_id):
     try:

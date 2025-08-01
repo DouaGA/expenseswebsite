@@ -2,9 +2,13 @@ from django.urls import path
 from . import views
 from django.contrib.auth import views as auth_views
 from .views import update_claim_status
+from django.views.generic import RedirectView
+
 
 urlpatterns = [
     path('', views.dashboard, name='claims_dashboard'),
+    path('', RedirectView.as_view(url='claims/'), name='home'),  # Add this line
+
     path('map/', views.claim_map, name='claims_map'),  # Modifié
     path('stats/', views.claim_stats, name='claims_stats'),
     path('profile/', views.agent_profile, name='agent_profile'),
@@ -25,4 +29,7 @@ urlpatterns = [
              template_name='password_change_done.html'
          ), 
          name='password_change_done'),
+    path('<int:pk>/', views.claim_detail, name='claim_detail'),  
+    path('claims/<int:claim_id>/', views.claim_detail, name='claim_detail'),
+
 ]
