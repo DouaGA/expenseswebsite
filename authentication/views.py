@@ -142,7 +142,7 @@ class VerificationView(View):
             messages.error(request, 'Lien d\'activation invalide')
             return redirect('login')
 class LoginView(View):
-    template_name = 'authentication/login.html'
+    template_name = 'authentication/login.html'  # Assurez-vous que c'est le bon chemin
     
     @method_decorator(csrf_protect)
     def dispatch(self, request, *args, **kwargs):
@@ -150,7 +150,7 @@ class LoginView(View):
     
     def get(self, request):
         if request.user.is_authenticated:
-            return redirect('claims_dashboard')  # Changed from 'dashboard' to 'claims_dashboard'
+            return redirect('claims_dashboard')
         return render(request, self.template_name)
     
     def post(self, request):
@@ -161,22 +161,30 @@ class LoginView(View):
         
         if user is not None:
             login(request, user)
-            return redirect('claims_dashboard')  # Changed from 'dashboard' to 'claims_dashboard'
+            return redirect('claims_dashboard')
         else:
-            messages.error(request, "Invalid username or password")
-            return render(request, self.template_name)
-        
+            messages.error(request, "Nom d'utilisateur ou mot de passe invalide")
+            return render(request, self.template_name, {
+                'username': username  # Pour pré-remplir le champ username
+            })
 class LogoutView(View):
     @method_decorator(login_required)
     def post(self, request):
         auth.logout(request)
         messages.success(request, 'Vous avez été déconnecté')
         return redirect('login')
+    def get(self, request):  # Permettre GET pour simplifier
+        auth.logout(request)
+        messages.success(request, 'Vous avez été déconnecté')
+        return redirect('home')  # Rediriger vers la page d'accueil
 
 class CustomLoginView(LoginView):
     template_name = 'registration/login.html'
-    redirect_authenticated_user = True
-from django.shortcuts import redirect
+    
+    def form_invalid(self, form):
+        # Pour debugger les erreurs de formulaire
+        print(form.errors)
+        return super().form_invalid(form)
 
 def authentication_redirect(request):
     return redirect('login')

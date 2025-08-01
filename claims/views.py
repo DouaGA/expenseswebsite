@@ -407,3 +407,10 @@ def municipality_lookup(request):
         })
     except Municipality.DoesNotExist:
         return JsonResponse({'error': 'Municipalité non trouvée'}, status=404)
+
+
+def home(request):
+    """Redirige vers le login ou le dashboard selon l'authentification"""
+    if request.user.is_authenticated:
+        return redirect('claims_dashboard')
+    return redirect('register')
