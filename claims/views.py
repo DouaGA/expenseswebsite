@@ -27,7 +27,8 @@ from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from datetime import datetime  # Add this import if not already present
 from django.db.models.functions import TruncDate
-
+import logging
+logger = logging.getLogger(__name__)
 
 def export_claims(request):
     if request.method == 'POST':
@@ -207,34 +208,31 @@ def claim_stats(request):
     }
     return render(request, 'claims/stats.html', context)
 
+
+
 @login_required
 def claim_detail(request, claim_id):
     try:
+        logger.debug(f"Accès à la réclamation {claim_id}")
         claim = get_object_or_404(Claim, id=claim_id)
+        
+        logger.debug(f"Réclamation trouvée : {claim}")
         
         # Vérifier les permissions
         if not request.user.is_staff and claim.created_by != request.user:
+            logger.warning("Accès non autorisé")
             return render(request, 'errors/403.html', status=403)
             
-        # Préparer les données pour la carte
-        map_data = {
-            'lat': claim.location_lat,
-            'lng': claim.location_lng,
-            'title': claim.title,
-            'type': claim.claim_type.name if claim.claim_type else 'Non spécifié',
-            'status': claim.get_status_display()
-        }
-        
         context = {
             'claim': claim,
-            'map_data': json.dumps(map_data),
             'page_title': f'Détails de la réclamation #{claim.id}',
-            'can_edit': request.user.is_staff
+            'can_edit': request.user.is_staff or claim.created_by == request.user
         }
+        logger.debug(f"Contexte préparé : {context}")
         return render(request, 'claims/claim_detail.html', context)
         
     except Exception as e:
-        logger.error(f"Erreur dans claim_detail: {str(e)}")
+        logger.error(f"Erreur dans claim_detail: {str(e)}", exc_info=True)
         return render(request, 'errors/500.html', {
             'error_message': "Une erreur s'est produite lors du chargement des détails."
         }, status=500)

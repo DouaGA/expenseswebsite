@@ -1,129 +1,194 @@
 {% extends 'base.html' %}
 
-{% block title %}Carte Interactive des Réclamations{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
-<style>
-    /* [Vos styles CSS existants conservés] */
-    
-    /* Ajout pour le panel de détails */
-    .details-panel {
-        position: fixed;
-        top: 0;
-        right: -400px;
-        width: 400px;
-        height: 100vh;
-        background: white;
-        box-shadow: -5px 0 15px rgba(0,0,0,0.1);
-        transition: right 0.3s ease;
-        z-index: 1000;
-        padding: 20px;
-        overflow-y: auto;
-    }
-    
-    .details-panel.active { right: 0; }
-    
-    .detail-item { margin-bottom: 15px; }
-    .detail-label { font-weight: bold; color: var(--dark-color); }
-    .detail-value { 
-        padding: 8px; 
-        background: #f8f9fa; 
-        border-radius: 6px;
-        word-break: break-word;
-    }
-    
-    .close-details {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        font-size: 1.5rem;
-        cursor: pointer;
-    }
-    
-    .images-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 10px;
-        margin-top: 10px;
-    }
-    
-    .claim-image {
-        width: 100%;
-        height: 150px;
-        object-fit: cover;
-        border-radius: 6px;
-    }
-</style>
-{% endblock %}
+{% block title %}Détails de la réclamation #{{ claim.id }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- [Votre en-tête existant] -->
-    
-    <!-- [Vos filtres existants] -->
-
-    <div id="map"></div>
-    
-    <!-- Panel des détails -->
-    <div id="details-panel" class="details-panel">
-        <span class="close-details">&times;</span>
-        <div id="details-content"></div>
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header {% if claim.status == 'accepted' %}bg-success{% elif claim.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %} text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">
+                    <i class="fas fa-file-alt me-2"></i>Réclamation #{{ claim.id }}
+                </h2>
+                <a href="{% url 'claims_dashboard' %}" class="btn btn-light btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i> Retour
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h4 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations de base</h4>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Titre :</strong> {{ claim.title }}</p>
+                            <p><strong>Type :</strong> <span class="badge bg-secondary">{{ claim.claim_type.name }}</span></p>
+                            <p><strong>Statut :</strong> 
+                                <span class="badge bg-{% if claim.status == 'accepted' %}success
+                                                     {% elif claim.status == 'rejected' %}danger
+                                                     {% else %}warning{% endif %}">
+                                    {{ claim.get_status_display }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h4 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Dates</h4>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Créée le :</strong> {{ claim.created_at|date:"d/m/Y H:i" }}</p>
+                            {% if claim.status != 'pending' %}
+                            <p><strong>Traitée le :</strong> {{ claim.updated_at|date:"d/m/Y H:i" }}</p>
+                            <p><strong>Temps de traitement :</strong> 
+                                {{ claim.updated_at|timesince:claim.created_at }}
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h4 class="mb-0"><i class="fas fa-align-left me-2"></i>Description</h4>
+                </div>
+                <div class="card-body">
+                    <div class="p-3 bg-light rounded">
+                        {{ claim.description|linebreaks }}
+                    </div>
+                </div>
+            </div>
+            
+            {% if claim.status == 'pending' %}
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h4 class="mb-0"><i class="fas fa-cogs me-2"></i>Actions</h4>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-center gap-3">
+                        <form method="post" action="{% url 'update_claim_status' claim.id 'accepted' %}" class="mb-0">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success btn-lg px-4">
+                                <i class="fas fa-check-circle me-2"></i>Accepter
+                            </button>
+                        </form>
+                        <form method="post" action="{% url 'update_claim_status' claim.id 'rejected' %}" class="mb-0">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-lg px-4">
+                                <i class="fas fa-times-circle me-2"></i>Rejeter
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 <script>
+// Fonction pour confirmer avant de rejeter
 document.addEventListener('DOMContentLoaded', function() {
-    // [Votre initialisation de carte existante]
+    // Initialisation de la carte
+    const map = L.map('map').setView([36.7372, 3.0865], 11); // Coordonnées par défaut (Alger)
+    
+    // Ajout du fond de carte
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
     
     const detailsPanel = document.getElementById('details-panel');
     const closeBtn = document.querySelector('.close-details');
+    const markers = {}; // Pour stocker les marqueurs par ID
     
     // Fermeture du panel
     closeBtn.addEventListener('click', function() {
         detailsPanel.classList.remove('active');
     });
 
-    // [Vos fonctions createCustomIcon et addLegend existantes]
+    // Création d'icônes personnalisées
+    function createCustomIcon(status) {
+        const colors = {
+            'pending': 'orange',
+            'accepted': 'green',
+            'rejected': 'red'
+        };
+        
+        return L.divIcon({
+            className: 'custom-marker',
+            html: `<div style="background: ${colors[status]}; 
+                          width: 24px; 
+                          height: 24px; 
+                          border-radius: 50%; 
+                          border: 2px solid white;
+                          transform: translate(-12px, -12px);"></div>`,
+            iconSize: [24, 24]
+        });
+    }
 
     // Charger les signalements avec filtres
     function loadClaims() {
-        // [Votre code de filtrage existant]
+        // Vous pouvez ajouter ici la logique de filtrage si nécessaire
+        const url = '/api/claims/'; // Endpoint API pour récupérer les réclamations
         
         fetch(url)
         .then(response => response.json())
         .then(data => {
-            // [Votre traitement des marqueurs existant]
+            // Supprimer les anciens marqueurs
+            Object.values(markers).forEach(marker => map.removeLayer(marker));
             
             data.forEach(claim => {
-                // [Votre création de marqueur existante]
-                
-                const popupContent = `
-                    <div class="info-window">
-                        <h5>${claim.title || 'Signalement sans titre'}</h5>
-                        <!-- [Vos autres infos] -->
-                        <div class="action-buttons">
-                            <button onclick="showClaimDetails(${claim.id})" class="btn btn-info">
-                                <i class="fas fa-eye mr-1"></i> Voir détails
-                            </button>
+                if (claim.location_lat && claim.location_lng) {
+                    const marker = L.marker(
+                        [claim.location_lat, claim.location_lng],
+                        { icon: createCustomIcon(claim.status) }
+                    );
+                    
+                    const popupContent = `
+                        <div class="info-window">
+                            <h5>${claim.title || 'Signalement sans titre'}</h5>
+                            <p><strong>Type:</strong> ${claim.claim_type?.name || 'Non spécifié'}</p>
+                            <p><strong>Statut:</strong> ${claim.status_display || 'Non spécifié'}</p>
+                            <div class="action-buttons">
+                                <button onclick="showClaimDetails(${claim.id})" class="btn btn-info">
+                                    <i class="fas fa-eye mr-1"></i> Voir détails
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                `;
-                
-                marker.bindPopup(popupContent);
-                markers[claim.id] = marker;
+                    `;
+                    
+                    marker.bindPopup(popupContent);
+                    marker.addTo(map);
+                    markers[claim.id] = marker;
+                }
             });
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors du chargement des réclamations');
         });
     }
 
-    // Afficher les détails complets
+    // Afficher les détails complets depuis l'interface admin
     window.showClaimDetails = function(claimId) {
+        // Afficher un indicateur de chargement
+        const detailsContent = document.getElementById('details-content');
+        detailsContent.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Chargement en cours...</p></div>';
+        detailsPanel.classList.add('active');
+        
+        // Récupérer les données depuis l'interface admin
         fetch(`/admin/claims/claim/${claimId}/change/?_popup=1`)
-            .then(response => response.text())
+            .then(response => {
+                if (!response.ok) throw new Error('Erreur de réseau');
+                return response.text();
+            })
             .then(html => {
                 // Extraire les données de la page admin
                 const parser = new DOMParser();
@@ -133,14 +198,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 const form = doc.querySelector('#claim_form');
                 if (!form) throw new Error('Formulaire admin non trouvé');
                 
+                // Fonction utilitaire pour récupérer les valeurs des champs
+                const getFieldValue = (name) => {
+                    const input = form.querySelector(`[name="${name}"]`);
+                    if (!input) return null;
+                    
+                    if (input.tagName === 'SELECT') {
+                        const selected = input.options[input.selectedIndex];
+                        return selected ? selected.text : null;
+                    }
+                    return input.value;
+                };
+                
+                // Construire l'objet claimData
                 const claimData = {
-                    title: form.querySelector('[name="title"]')?.value,
-                    claim_type: form.querySelector('[name="claim_type"] option:checked')?.text,
-                    status: form.querySelector('[name="status"] option:checked')?.text,
-                    description: form.querySelector('[name="description"]')?.value,
-                    location_address: form.querySelector('[name="location_address"]')?.value,
-                    admin_comment: form.querySelector('[name="admin_comment"]')?.value,
-                    created_at: form.querySelector('[name="created_at"]')?.value,
+                    id: claimId,
+                    title: getFieldValue('title'),
+                    claim_type: getFieldValue('claim_type'),
+                    status: getFieldValue('status'),
+                    description: getFieldValue('description'),
+                    location_address: getFieldValue('location_address'),
+                    admin_comment: getFieldValue('admin_comment'),
+                    created_at: getFieldValue('created_at'),
                     images: Array.from(form.querySelectorAll('.field-image img')).map(img => img.src)
                 };
                 
@@ -150,21 +229,42 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => {
                 console.error('Erreur:', error);
                 // Fallback vers l'API si l'accès admin échoue
-                fetch(`/api/claims/${claimId}/`)
-                    .then(response => response.json())
-                    .then(displayClaimDetails)
-                    .catch(err => {
-                        alert('Erreur de chargement des détails');
-                    });
+                fetchFromAPI(claimId);
             });
     };
     
+    // Fallback: Récupérer depuis l'API
+    function fetchFromAPI(claimId) {
+        fetch(`/api/claims/${claimId}/`)
+            .then(response => {
+                if (!response.ok) throw new Error('Erreur API');
+                return response.json();
+            })
+            .then(displayClaimDetails)
+            .catch(err => {
+                console.error('Erreur API:', err);
+                const detailsContent = document.getElementById('details-content');
+                detailsContent.innerHTML = `
+                    <div class="alert alert-danger">
+                        Impossible de charger les détails. Veuillez réessayer.
+                    </div>
+                `;
+            });
+    }
+    
+    // Afficher les détails dans le panel
     function displayClaimDetails(claim) {
         const detailsContent = document.getElementById('details-content');
         const createdAt = claim.created_at ? new Date(claim.created_at) : new Date();
         
         detailsContent.innerHTML = `
             <h4>${claim.title || 'Signalement sans titre'}</h4>
+            <hr>
+            
+            <div class="detail-item">
+                <div class="detail-label">ID</div>
+                <div class="detail-value">${claim.id}</div>
+            </div>
             
             <div class="detail-item">
                 <div class="detail-label">Type</div>
@@ -173,12 +273,22 @@ document.addEventListener('DOMContentLoaded', function() {
             
             <div class="detail-item">
                 <div class="detail-label">Statut</div>
-                <div class="detail-value">${claim.status || 'Non spécifié'}</div>
+                <div class="detail-value">
+                    <span class="badge ${getStatusBadgeClass(claim.status)}">
+                        ${claim.status || 'Non spécifié'}
+                    </span>
+                </div>
             </div>
             
             <div class="detail-item">
                 <div class="detail-label">Date</div>
-                <div class="detail-value">${createdAt.toLocaleDateString('fr-FR')}</div>
+                <div class="detail-value">${createdAt.toLocaleDateString('fr-FR', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })}</div>
             </div>
             
             <div class="detail-item">
@@ -191,31 +301,84 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="detail-value">${claim.description || 'Aucune description'}</div>
             </div>
             
+            ${claim.admin_comment ? `
             <div class="detail-item">
                 <div class="detail-label">Commentaire admin</div>
-                <div class="detail-value">${claim.admin_comment || 'Aucun commentaire'}</div>
+                <div class="detail-value">${claim.admin_comment}</div>
             </div>
+            ` : ''}
             
             ${claim.images && claim.images.length > 0 ? `
             <div class="detail-item">
-                <div class="detail-label">Images</div>
+                <div class="detail-label">Images (${claim.images.length})</div>
                 <div class="images-grid">
-                    ${claim.images.map(img => `<img src="${img}" class="claim-image">`).join('')}
+                    ${claim.images.map(img => `
+                        <img src="${img}" class="claim-image" onclick="window.open('${img}', '_blank')">
+                    `).join('')}
                 </div>
             </div>
             ` : ''}
             
             <div class="mt-3">
-                <a href="/admin/claims/claim/${claim.id}/change/" class="btn btn-primary">
-                    <i class="fas fa-edit"></i> Modifier dans l'admin
+                <a href="/admin/claims/claim/${claim.id}/change/" class="btn btn-primary mr-2">
+                    <i class="fas fa-edit"></i> Modifier
                 </a>
+                <button class="btn btn-secondary" onclick="zoomToMarker(${claim.id})">
+                    <i class="fas fa-map-marker-alt"></i> Localiser
+                </button>
             </div>
         `;
         
         detailsPanel.classList.add('active');
     }
-
-    // [Vos autres fonctions existantes]
+    
+    // Helper pour les classes CSS des statuts
+    function getStatusBadgeClass(status) {
+        const classes = {
+            'pending': 'badge-warning',
+            'accepted': 'badge-success',
+            'rejected': 'badge-danger'
+        };
+        return classes[status] || 'badge-secondary';
+    }
+    
+    // Zoom sur le marqueur correspondant
+    window.zoomToMarker = function(claimId) {
+        if (markers[claimId]) {
+            map.setView(markers[claimId].getLatLng(), 15);
+            markers[claimId].openPopup();
+            detailsPanel.classList.remove('active');
+        }
+    };
+    
+    // Ajouter une légende
+    function addLegend() {
+        const legend = L.control({ position: 'bottomright' });
+        
+        legend.onAdd = function(map) {
+            const div = L.DomUtil.create('div', 'legend');
+            const statuses = [
+                {status: 'pending', label: 'En attente', color: 'orange'},
+                {status: 'accepted', label: 'Acceptée', color: 'green'},
+                {status: 'rejected', label: 'Rejetée', color: 'red'}
+            ];
+            
+            div.innerHTML = '<h6>Légende</h6>';
+            
+            statuses.forEach(item => {
+                div.innerHTML += `
+                    <div>
+                        <i style="background:${item.color}"></i>
+                        ${item.label}
+                    </div>
+                `;
+            });
+            
+            return div;
+        };
+        
+        legend.addTo(map);
+    }
     
     // Chargement initial
     loadClaims();
