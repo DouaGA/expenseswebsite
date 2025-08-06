@@ -1,0 +1,44 @@
+{% extends "core/base_auth.html" %}
+
+{% block title %}Inscription Citoyen{% endblock %}
+
+{% block content %}
+<div class="auth-container citizen-theme">
+    <h2 class="text-center mb-4">Inscription Citoyen</h2>
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input type="email" name="email" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Prénom</label>
+            <input type="text" name="first_name" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Nom</label>
+            <input type="text" name="last_name" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">CIN</label>
+            <input type="text" name="cin" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Mot de passe</label>
+            <input type="password" name="password1" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Confirmation</label>
+            <input type="password" name="password2" class="form-control" required>
+        </div>
+
+        <button type="submit" class="btn btn-success w-100">S'inscrire</button>
+    </form>
+</div>
+{% endblock %}

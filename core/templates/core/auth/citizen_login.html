@@ -1,0 +1,60 @@
+{% extends "core/base_auth.html" %}
+
+{% block content %}
+<div class="citizen-auth-container">
+    <h2>Connexion Citoyen</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label>Email :</label>
+            {{ form.email }}
+        </div>
+        <div class="form-group">
+            <label>Mot de passe :</label>
+            {{ form.password }}
+        </div>
+        <div class="form-group">
+            <label>CIN :</label>
+            {{ form.cin }}
+        </div>
+        <button type="submit">Se connecter</button>
+    </form>
+</div>
+{% extends 'base_auth.html' %}
+
+{% block title %}Connexion Citoyen{% endblock %}
+
+{% block auth_content %}
+<div class="card shadow-sm" style="width: 100%; max-width: 400px;">
+    <div class="card-header bg-success text-white">
+        <h4 class="mb-0 text-center"><i class="fas fa-user"></i> Connexion Citoyen</h4>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{% url 'citizen_login' %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
+            
+            <div class="mb-3">
+                <label class="form-label">Email :</label>
+                <input type="email" name="email" class="form-control" required>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Mot de passe :</label>
+                <input type="password" name="password" class="form-control" required>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">CIN :</label>
+                <input type="text" name="cin" class="form-control" required>
+            </div>
+            
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-success">Se connecter</button>
+                <a href="{% url 'citizen_register' %}" class="btn btn-link">Créer un compte</a>
+                <a href="{% url 'home' %}" class="btn btn-outline-secondary">Retour</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

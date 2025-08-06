@@ -1,0 +1,469 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #4361ee;
+        --secondary-color: #3f37c9;
+        --accent-color: #4895ef;
+        --dark-color: #2b2d42;
+        --light-color: #f8f9fa;
+        --success-color: #4cc9f0;
+        --warning-color: #f8961e;
+        --danger-color: #f72585;
+    }
+    
+    .profile-container {
+        max-width: 1200px;
+        margin: 30px auto;
+        padding: 0;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .profile-header {
+        padding: 1.5rem;
+        background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+        color: white;
+        position: relative;
+    }
+    
+    .profile-header h2 {
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        font-size: 28px;
+        margin: 0;
+    }
+    
+    .profile-header h2 i {
+        margin-right: 15px;
+    }
+    
+    .profile-content {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        min-height: 600px;
+    }
+    
+    /* Sidebar */
+    .profile-sidebar {
+        background: var(--light-color);
+        padding: 30px 20px;
+        border-right: 1px solid rgba(0,0,0,0.05);
+    }
+    
+    .profile-picture-container {
+        text-align: center;
+        margin-bottom: 30px;
+        position: relative;
+    }
+    
+    #profile-picture {
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 5px solid white;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        transition: all 0.4s ease;
+        cursor: pointer;
+    }
+    
+    #profile-picture:hover {
+        transform: scale(1.03);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+    }
+    
+    .profile-actions {
+        display: grid;
+        gap: 12px;
+        margin-top: 30px;
+    }
+    
+    .profile-actions a, .profile-actions button {
+        padding: 12px;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        text-align: center;
+    }
+    
+    .profile-actions a i, .profile-actions button i {
+        margin-right: 10px;
+    }
+    
+    .edit-profile-btn {
+        background: var(--primary-color);
+        color: white;
+    }
+    
+    .change-password-btn {
+        background: var(--warning-color);
+        color: white;
+    }
+    
+    .logout-btn {
+        background: var(--danger-color);
+        color: white;
+    }
+    
+    .profile-actions a:hover, .profile-actions button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        opacity: 0.9;
+    }
+    
+    /* Main content */
+    .profile-main {
+        padding: 30px;
+    }
+    
+    .profile-section {
+        margin-bottom: 40px;
+    }
+    
+    .profile-section h3 {
+        color: var(--dark-color);
+        margin-bottom: 25px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        font-size: 22px;
+        position: relative;
+        padding-bottom: 10px;
+    }
+    
+    .profile-section h3::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 50px;
+        height: 3px;
+        background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+        border-radius: 3px;
+    }
+    
+    .profile-section h3 i {
+        margin-right: 12px;
+        color: var(--primary-color);
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+    }
+    
+    .info-card {
+        background: var(--light-color);
+        border-radius: 10px;
+        padding: 20px;
+        transition: all 0.3s ease;
+    }
+    
+    .info-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+    
+    .info-card label {
+        font-weight: 600;
+        color: #6c757d;
+        font-size: 14px;
+        display: block;
+        margin-bottom: 5px;
+    }
+    
+    .info-card p {
+        margin: 0;
+        font-size: 16px;
+        color: var(--dark-color);
+        line-height: 1.6;
+    }
+    
+    /* Edit mode */
+    .edit-form .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .edit-form label {
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    .edit-form .form-control, .edit-form .form-select {
+        border-radius: 8px;
+        padding: 10px 15px;
+        border: 1px solid #e0e0e0;
+    }
+    
+    .edit-form .form-control:focus, .edit-form .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+    }
+    
+    .edit-form .btn-save {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 10px 25px;
+        border-radius: 8px;
+        font-weight: 500;
+    }
+    
+    .edit-form .btn-cancel {
+        border: 1px solid #e0e0e0;
+        padding: 10px 25px;
+        border-radius: 8px;
+        font-weight: 500;
+    }
+    
+    /* Responsive */
+    @media (max-width: 992px) {
+        .profile-content {
+            grid-template-columns: 1fr;
+        }
+        
+        .profile-sidebar {
+            border-right: none;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="profile-header">
+        <h2><i class="fas fa-user-shield"></i> 
+            {% if edit_mode %}Modifier le Profil{% else %}Profil de l'Agent{% endif %}
+        </h2>
+    </div>
+    
+    <div class="profile-content">
+        <!-- Sidebar -->
+        <div class="profile-sidebar">
+            <div class="profile-picture-container">
+                <img src="{{ user.profile.image.url }}" 
+                     alt="Photo de profil" 
+                     id="profile-picture"
+                     class="img-fluid">
+                
+                {% if edit_mode %}
+                <form method="post" enctype="multipart/form-data" class="mt-3">
+                    {% csrf_token %}
+                    <input type="file" name="image" id="profile-image-input" class="d-none" accept="image/*">
+                    <label for="profile-image-input" class="btn btn-sm btn-primary w-100">
+                        <i class="fas fa-camera me-2"></i>Changer
+                    </label>
+                </form>
+                {% endif %}
+            </div>
+            
+            <div class="profile-actions">
+                {% if not edit_mode %}
+                <a href="?edit=true" class="edit-profile-btn">
+                  <i class="fas fa-edit"></i> Modifier le profil
+                </a>
+                <a href="{% url 'password_change' %}" class="change-password-btn">
+                    <i class="fas fa-key"></i> Changer mot de passe
+                </a>
+                <a href="{% url 'logout' %}" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> Déconnexion
+                </a>
+                {% else %}
+                <button type="submit" form="profile-form" class="edit-profile-btn">
+                    <i class="fas fa-save"></i> Enregistrer
+                </button>
+                <a href="{% url 'core:profile' %}" class="btn btn-outline-secondary">
+                  <i class="fas fa-times"></i> Annuler
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Main content -->
+        <div class="profile-main">
+            {% if not edit_mode %}
+            <!-- View mode -->
+            <div class="profile-section">
+                <h3><i class="fas fa-info-circle"></i> Informations Personnelles</h3>
+                
+                <div class="info-grid">
+                    <div class="info-card">
+                        <label>Nom complet</label>
+                        <p>{{ user.get_full_name|default:"Non renseigné" }}</p>
+                    </div>
+                    
+                    <div class="info-card">
+                        <label>Email</label>
+                        <p>{{ user.email }}</p>
+                    </div>
+                    
+                    <div class="info-card">
+                        <label>Téléphone</label>
+                        <p>{{ user.profile.phone|default:"Non renseigné" }}</p>
+                    </div>
+                    
+                    <div class="info-card">
+                        <label>Municipalité</label>
+                        <p>{{ user.profile.municipality.name|default:"Non spécifiée" }}</p>
+                    </div>
+                    
+                    <div class="info-card">
+                        <label>Wilaya</label>
+                        <p>{{ user.profile.municipality.wilaya|default:"Non spécifiée" }}</p>
+                    </div>
+                    
+                    <div class="info-card">
+                        <label>Date d'inscription</label>
+                        <p>{{ user.date_joined|date:"d/m/Y" }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="profile-section">
+                <h3><i class="fas fa-file-alt"></i> Informations Supplémentaires</h3>
+                
+                <div class="info-grid">
+                    {% if user.profile.address %}
+                    <div class="info-card">
+                        <label>Adresse</label>
+                        <p>{{ user.profile.address }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if user.profile.bio %}
+                    <div class="info-card">
+                        <label>Bio</label>
+                        <p>{{ user.profile.bio }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <!-- Edit mode -->
+            <form method="post" enctype="multipart/form-data" id="profile-form">
+                {% csrf_token %}
+                
+                <div class="profile-section edit-form">
+                    <h3><i class="fas fa-id-card"></i> Informations Personnelles</h3>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="id_first_name">Prénom</label>
+                                <input type="text" class="form-control" id="id_first_name" name="first_name" 
+                                       value="{{ form.first_name.value|default:'' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="id_last_name">Nom</label>
+                                <input type="text" class="form-control" id="id_last_name" name="last_name" 
+                                       value="{{ form.last_name.value|default:'' }}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="id_email">Email</label>
+                        <input type="email" class="form-control" id="id_email" name="email" 
+                               value="{{ form.email.value|default:'' }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="id_phone">Téléphone</label>
+                        <input type="text" class="form-control" id="id_phone" name="phone" 
+                               value="{{ form.phone.value|default:'' }}">
+                    </div>
+                </div>
+                
+                <div class="profile-section edit-form">
+                    <h3><i class="fas fa-info-circle"></i> Informations Supplémentaires</h3>
+                    
+                    <div class="form-group">
+                        <label for="id_address">Adresse</label>
+                        <textarea class="form-control" id="id_address" name="address" rows="2">{{ form.address.value|default:'' }}</textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="id_municipality">Municipalité</label>
+                        <select class="form-select" id="id_municipality" name="municipality">
+                            <option value="">Sélectionnez...</option>
+                            {% for mun in municipalities %}
+                            <option value="{{ mun.id }}" {% if form.municipality.value == mun.id %}selected{% endif %}>
+                                {{ mun.name }} ({{ mun.wilaya }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="id_bio">Bio</label>
+                        <textarea class="form-control" id="id_bio" name="bio" rows="3">{{ form.bio.value|default:'' }}</textarea>
+                    </div>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation for profile picture
+    const profilePic = document.getElementById('profile-picture');
+    if (profilePic) {
+        setTimeout(() => {
+            profilePic.style.transform = 'scale(1.05)';
+            setTimeout(() => {
+                profilePic.style.transform = 'scale(1)';
+            }, 300);
+        }, 500);
+    }
+    
+    // Handle image upload preview
+    const imageInput = document.getElementById('profile-image-input');
+    if (imageInput) {
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    profilePic.src = event.target.result;
+                    
+                    // Auto-submit the form when image is selected
+                    const form = imageInput.closest('form');
+                    if (form) {
+                        form.submit();
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
