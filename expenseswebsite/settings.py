@@ -63,15 +63,17 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'authentication',
-    'claims',
+    'core.apps.CoreConfig',
+    'crispy_forms',
+    'crispy_bootstrap5',
     'django.contrib.gis',
 
 ]
-LOGIN_URL = 'login'  # URL de la page de connexion
-LOGIN_REDIRECT_URL = 'claims_dashboard'  # Redirection après connexion réussie
-LOGOUT_REDIRECT_URL = 'login'  # Redirection après déconnexion
-
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
+AUTH_USER_MODEL = 'core.User'
+LOGIN_URL = 'core:agent_login'
+LOGIN_REDIRECT_URL = 'core:home'
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -87,7 +89,7 @@ ROOT_URLCONF = 'expenseswebsite.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR,'templates')],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],  # Ajoutez cette ligne
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -145,7 +147,25 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
-
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+        'authentication': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    },
+}
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
