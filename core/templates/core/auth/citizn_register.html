@@ -1,44 +1,54 @@
-{% extends "core/base_auth.html" %}
+{% extends 'core/base_auth.html' %}
 
-{% block title %}Inscription Citoyen{% endblock %}
-
-{% block content %}
-<div class="auth-container citizen-theme">
-    <h2 class="text-center mb-4">Inscription Citoyen</h2>
-    <form method="post">
-        {% csrf_token %}
-        
-        <div class="mb-3">
-            <label class="form-label">Email</label>
-            <input type="email" name="email" class="form-control" required>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Prénom</label>
-            <input type="text" name="first_name" class="form-control" required>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Nom</label>
-            <input type="text" name="last_name" class="form-control" required>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">CIN</label>
-            <input type="text" name="cin" class="form-control" required>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Mot de passe</label>
-            <input type="password" name="password1" class="form-control" required>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Confirmation</label>
-            <input type="password" name="password2" class="form-control" required>
-        </div>
-
-        <button type="submit" class="btn btn-success w-100">S'inscrire</button>
-    </form>
+{% block auth_content %}
+<div class="card shadow-lg" style="max-width: 500px;">
+    <div class="card-header bg-success text-white">
+        <h4 class="text-center"><i class="fas fa-user-plus"></i> Inscription Citoyen</h4>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{% url 'core:citizen_register' %}">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+                <div class="alert alert-danger">
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" name="email" class="form-control" required>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">CIN</label>
+                <input type="text" name="cin" class="form-control" required>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Mot de passe</label>
+                <input type="password" name="password1" class="form-control" required>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Confirmation du mot de passe</label>
+                <input type="password" name="password2" class="form-control" required>
+            </div>
+            
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-success">S'inscrire</button>
+                <a href="{% url 'core:citizen_login' %}" class="btn btn-link">
+                    Déjà inscrit? Se connecter
+                </a>
+                <a href="{% url 'core:home' %}" class="btn btn-outline-secondary">
+                    Retour à l'accueil
+                </a>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}

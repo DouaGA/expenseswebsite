@@ -27,12 +27,22 @@ class CitizenRegisterForm(UserCreationForm):
         model = User
         fields = ['username', 'email', 'password1', 'password2']  # Modifiez selon vos besoins
 
+from .models import Claim, Municipality, ClaimType
+
 class ClaimForm(forms.ModelForm):
     class Meta:
-        from .models import Claim  # Importez votre modèle Claim ici
-        model = Claim
-        fields = '__all__'  # Ou spécifiez les champs souhaités
+        model = Claim  # Remplacez par votre modèle Claim
+        fields = ['title', 'claim_type', 'municipality', 'description', 'attachment', 'location_lat', 'location_lng']
+        widgets = {
+            'location_lat': forms.HiddenInput(),
+            'location_lng': forms.HiddenInput(),
+            'municipality': forms.Select(attrs={'class': 'form-control'}),
 
+        }
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['municipality'].queryset = Municipality.objects.all()
+        self.fields['claim_type'].queryset = ClaimType.objects.all()
 class ProfileForm(forms.ModelForm):
     class Meta:
         from .models import Profile  # Importez votre modèle Profile ici

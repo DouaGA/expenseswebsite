@@ -1,0 +1,207 @@
+{% extends 'core/base_auth.html' %}
+
+{% block title %}Réclamation #{{ claim.id }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-file-alt me-2"></i>Réclamation #{{ claim.id }}
+        </h1>
+        <a href="{% url 'core:citizen_dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Retour
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">{{ claim.title }}</h6>
+                    <span class="badge bg-{% if claim.status == 'accepted' %}success{% elif claim.status == 'rejected' %}danger{% else %}warning{% endif %}">
+                        {{ claim.get_status_display }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h5 class="text-gray-800">
+                            <i class="fas fa-align-left me-2"></i>Description
+                        </h5>
+                        <div class="p-3 bg-light rounded">
+                            {{ claim.description|linebreaks }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5 class="text-gray-800">
+                                <i class="fas fa-info-circle me-2"></i>Informations
+                            </h5>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Type</span>
+                                    <span class="font-weight-bold">{{ claim.claim_type.name|default:"-" }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Municipalité</span>
+                                    <span class="font-weight-bold">{{ claim.municipality.name|default:"-" }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Date de création</span>
+                                    <span class="font-weight-bold">{{ claim.created_at|date:"d/m/Y H:i" }}</span>
+                                </li>
+                                {% if claim.status != 'pending' %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Date de traitement</span>
+                                    <span class="font-weight-bold">{{ claim.updated_at|date:"d/m/Y H:i" }}</span>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="text-gray-800">
+                                <i class="fas fa-map-marked-alt me-2"></i>Localisation
+                            </h5>
+                            {% if claim.location_lat and claim.location_lng %}
+                            <div id="detailMap" style="height: 250px; border-radius: 8px;"></div>
+                            {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Aucune localisation disponible
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if claim.rejection_reason %}
+                    <div class="alert alert-danger">
+                        <h5 class="alert-heading">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Motif de rejet
+                        </h5>
+                        <hr>
+                        <p class="mb-0">{{ claim.rejection_reason }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-paperclip me-2"></i>Pièces jointes
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if claim.attachment %}
+                    <div class="text-center mb-3">
+                        <a href="{{ claim.attachment.url }}" target="_blank" class="btn btn-primary">
+                            <i class="fas fa-download me-1"></i> Télécharger
+                        </a>
+                    </div>
+                    <div class="text-center">
+                        {% if claim.attachment.url|lower|slice:"-4:" == ".jpg" or claim.attachment.url|lower|slice:"-5:" == ".jpeg" or claim.attachment.url|lower|slice:"-4:" == ".png" %}
+                                                <img src="{{ claim.attachment.url }}" alt="Pièce jointe" class="img-fluid rounded shadow-sm">
+                        {% else %}
+                        <div class="p-3 bg-light rounded">
+                            <i class="fas fa-file-alt fa-3x text-muted mb-2"></i>
+                            <p class="mb-0">Fichier joint: {{ claim.attachment.name|cut:"attachments/" }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Aucune pièce jointe disponible
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-cogs me-2"></i>Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-3">
+                        {% if claim.status == 'pending' %}
+                        <a href="{% url 'core:edit_claim' claim.id %}" class="btn btn-warning">
+                            <i class="fas fa-edit me-1"></i> Modifier
+                        </a>
+                        <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                            <i class="fas fa-trash me-1"></i> Supprimer
+                        </button>
+                        {% elif claim.status == 'rejected' %}
+                        <a href="{% url 'core:create_claim' %}?duplicate={{ claim.id }}" class="btn btn-info">
+                            <i class="fas fa-copy me-1"></i> Recréer
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmer la suppression
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer définitivement cette réclamation ?</p>
+                <p class="fw-bold">Cette action est irréversible.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Annuler
+                </button>
+                <form action="{% url 'core:delete_claim' claim.id %}" method="POST">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i> Supprimer
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Map JS -->
+{% if claim.location_lat and claim.location_lng %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const map = L.map('detailMap').setView([{{ claim.location_lat }}, {{ claim.location_lng }}], 16);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        const marker = L.marker([{{ claim.location_lat }}, {{ claim.location_lng }}]).addTo(map);
+        
+        marker.bindPopup(`
+            <b>{{ claim.title }}</b><br>
+            <small>Type: {{ claim.claim_type.name|default:"-" }}</small>
+        `).openPopup();
+        
+        // Add a circle to better show the exact location
+        L.circle([{{ claim.location_lat }}, {{ claim.location_lng }}], {
+            color: '#3388ff',
+            fillColor: '#3388ff',
+            fillOpacity: 0.2,
+            radius: 20
+        }).addTo(map);
+    });
+</script>
+{% endif %}
+{% endblock %}

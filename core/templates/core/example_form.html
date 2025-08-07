@@ -1,0 +1,35 @@
+<select id="gov-select" class="form-control">
+    <option value="">Choisir un gouvernorat</option>
+    {% for gov in gouvernorats %}
+        <option value="{{ gov }}">{{ gov }}</option>
+    {% endfor %}
+</select>
+
+<select id="cite-select" class="form-control" disabled>
+    <option value="">Choisir une cité</option>
+</select>
+
+<script>
+document.getElementById('gov-select').addEventListener('change', function() {
+    const gov = this.value;
+    const citeSelect = document.getElementById('cite-select');
+    
+    if (gov) {
+        fetch(`/api/get_cites/?gov=${gov}`)
+            .then(response => response.json())
+            .then(cites => {
+                citeSelect.innerHTML = '<option value="">Choisir une cité</option>';
+                cites.forEach(cite => {
+                    const option = document.createElement('option');
+                    option.value = cite;
+                    option.textContent = cite;
+                    citeSelect.appendChild(option);
+                });
+                citeSelect.disabled = false;
+            });
+    } else {
+        citeSelect.innerHTML = '<option value="">Choisir une cité</option>';
+        citeSelect.disabled = true;
+    }
+});
+</script>
