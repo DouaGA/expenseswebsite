@@ -356,32 +356,32 @@
             <div class="sidebar-nav">
                 <ul>
                     <li>
-                        <a class="active" href="{% url 'core:agent_dashboard' %}">
+                        <a class="active" href="{% url 'agent_dashboard' %}">
                             <i class="fas fa-tachometer-alt me-2"></i> Dashboard
                         </a>
                     </li>
                     <li>
-                        <a href="{% url 'core:claims_list' %}">
+                        <a href="{% url 'claims_list' %}">
                             <i class="fas fa-list me-2"></i> Réclamations
                         </a>
                     </li>
                     <li>
-                        <a href="{% url 'core:claims_map' %}">
+                        <a href="{% url 'claims_map' %}">
                             <i class="fas fa-map-marked-alt me-2"></i> Carte interactive
                         </a>
                     </li>
                     <li>
-                        <a href="{% url 'core:stats' %}">
+                        <a href="{% url 'stats' %}">
                             <i class="fas fa-chart-bar me-2"></i> Statistiques
                         </a>
                     </li>
                     <li>
-                        <a href="{% url 'core:profile' %}">
+                        <a href="{% url 'profile' %}">
                             <i class="fas fa-user me-2"></i> Profil
                         </a>
                     </li>
                     <li class="logout-item">
-                        <form action="{% url 'core:logout' %}" method="post" class="d-inline">
+                        <form action="{% url 'logout' %}" method="post" class="d-inline">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-link text-danger p-0" style="background:none;border:none;">
                                 <i class="fas fa-sign-out-alt me-2"></i> Déconnexion
@@ -836,7 +836,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function updateClaimStatus(claimId, status) {
     if (!confirm(`Voulez-vous vraiment ${status === 'accepted' ? 'accepter' : 'rejeter'} cette réclamation ?`)) return;
     
-    fetch(`{% url 'core:update_claim_status' 0 'status' %}`.replace('0', claimId).replace('status', status), {
+    fetch(`{% url 'update_claim_status' 0 'status' %}`.replace('0', claimId).replace('status', status), {
         method: 'POST',
         headers: {
             'X-CSRFToken': '{{ csrf_token }}',

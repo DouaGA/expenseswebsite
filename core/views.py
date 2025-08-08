@@ -12,8 +12,8 @@ import json
 import csv
 from openpyxl import Workbook
 from django.urls import reverse
-from .models import User, Claim, ClaimType, Municipality, CodePostale, Citoyen, Agent
-from .forms import AgentRegisterForm, CitoyenRegisterForm, ClaimForm
+from .models import Profile, User, Claim, ClaimType, Municipality, CodePostale, Citoyen, Agent
+from .forms import AgentRegisterForm, CitoyenRegisterForm, ClaimForm, UserForm
 from django.contrib.auth.views import LogoutView as DjangoLogoutView
 from django.contrib.auth.hashers import check_password
 from django.core.serializers import serialize
@@ -22,6 +22,7 @@ from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.models import User
+from .forms import ProfileForm
 
 def home(request):
     return render(request, 'core/home.html')
@@ -115,9 +116,7 @@ class LogoutView(View):
 
 @login_required
 def claims_list(request):
-    if request.user.user_type != 'agent':
-        return redirect('access_denied')
-    
+
     claims = Claim.objects.all().order_by('-created_at')
     status_filter = request.GET.get('status', 'all')
     if status_filter != 'all':
@@ -145,9 +144,6 @@ def citizen_claim_detail(request, pk):
 
 @login_required
 def claims_map(request):
-    if request.user.user_type != 'agent':
-        return redirect('access_denied')
-    
     claims = Claim.objects.all()
     municipalities = Municipality.objects.all()
     
@@ -224,35 +220,44 @@ def create_claim(request):
 
 @login_required
 def profile_view(request):
+    # Get or create the user's profile
+    profile, created = Profile.objects.get_or_create(user=request.user)
+    
     edit_mode = request.GET.get('edit', False)
     municipalities = Municipality.objects.all()
     
     if request.method == 'POST' and edit_mode:
-        form = ProfileForm(request.POST, request.FILES, instance=request.user.profile)
-        if form.is_valid():
-            form.save()
+        user_form = UserForm(request.POST, instance=request.user)
+        profile_form = ProfileForm(request.POST, request.FILES, instance=profile)
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+            messages.success(request, "Profil mis à jour avec succès!")
             return redirect('profile')
     else:
-        form = ProfileForm(instance=request.user.profile)
+        user_form = UserForm(instance=request.user)
+        profile_form = ProfileForm(instance=profile)
     
     return render(request, 'core/profile.html', {
         'edit_mode': edit_mode,
-        'form': form,
+        'user_form': user_form,
+        'profile_form': profile_form,
         'user': request.user,
         'municipalities': municipalities
     })
-
 @login_required
 def edit_profile(request):
+    # Get or create the user's profile
+    profile, created = Profile.objects.get_or_create(user=request.user)
     municipalities = Municipality.objects.all()
     
     if request.method == 'POST':
-        form = ProfileForm(request.POST, request.FILES, instance=request.user.profile)
+        form = ProfileForm(request.POST, request.FILES, instance=profile)
         if form.is_valid():
             form.save()
             return redirect('profile')
     else:
-        form = ProfileForm(instance=request.user.profile)
+        form = ProfileForm(instance=profile)
     
     return render(request, 'core/profile.html', {
         'edit_mode': True,

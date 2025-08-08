@@ -61,7 +61,7 @@ class AgentRegisterForm(forms.Form):
     code_postale = forms.ModelChoiceField(
         queryset=CodePostale.objects.all(),
         label="Code postal",
-        required=True
+        required=False
     )
 
     def clean_username(self):
@@ -101,3 +101,30 @@ class AgentRegisterForm(forms.Form):
             code_postale=data['code_postale']
         )
         return agent
+
+# Add this to forms.py
+from .models import Profile
+class UserForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email']
+class ProfileForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = ['image', 'phone', 'municipality']
+        widgets = {
+            'phone': forms.TextInput(attrs={'placeholder': 'Numéro de téléphone'}),
+            'municipality': forms.Select(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'image': 'Photo de profil',
+            'phone': 'Téléphone',
+            'municipality': 'Municipalité'
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields:
+            self.fields[field].widget.attrs.update({
+                'class': 'form-control'
+            })
