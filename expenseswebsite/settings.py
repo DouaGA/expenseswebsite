@@ -71,12 +71,12 @@ INSTALLED_APPS = [
 
 
 ]
+
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
-AUTH_USER_MODEL = 'core.User'
-# Pour les agents
-LOGIN_URL = 'core:login_selector'  # Ou 'core:agent_login' comme valeur par défaut
-LOGIN_REDIRECT_URL = 'core:home'
+ROOT_URLCONF = 'expenseswebsite.urls'
+
+LOGIN_URL = 'login'
 
 from django.conf import settings
 json_path = settings.BASE_DIR / 'templates' / 'core' / 'data' / 'zip-postcodes.json'
@@ -89,6 +89,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
 ]
 
 ROOT_URLCONF = 'expenseswebsite.urls'

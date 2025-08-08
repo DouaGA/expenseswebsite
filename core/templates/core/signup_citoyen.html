@@ -1,0 +1,180 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Créer un compte - GreenMap</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500&display=swap" rel="stylesheet" />
+
+  <style>
+    body {
+      background-color: #f4f4f4;
+      font-family: 'Poppins', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+
+    form {
+      background-color: #ffffff;
+      padding: 30px 40px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+      box-sizing: border-box;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 25px;
+      color: #16610E;
+      font-weight: 600;
+      font-size: 1.8rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: #333;
+      font-size: 0.9rem;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 1rem;
+      font-family: inherit;
+      transition: border-color 0.3s ease;
+      box-sizing: border-box;
+    }
+
+    input:focus {
+      border-color: #16610E;
+      outline: none;
+      box-shadow: 0 0 5px rgba(22, 97, 14, 0.5);
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #16610E;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #14550c;
+    }
+
+    .login-link {
+      margin-top: 15px;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    .login-link a {
+      color: #16610E;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .login-link a:hover {
+      text-decoration: underline;
+    }
+
+    /* Messages d’erreur */
+    .error-message {
+      color: #d93025;
+      font-size: 0.85rem;
+      margin-top: -10px;
+      margin-bottom: 10px;
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      form {
+        padding: 25px 20px;
+      }
+      h2 {
+        font-size: 1.5rem;
+      }
+      input {
+        font-size: 0.95rem;
+        padding: 8px;
+      }
+      button {
+        font-size: 0.95rem;
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <form action="" method="post" novalidate>
+    {% csrf_token %}
+    <h2>Créer un compte citoyen</h2>
+
+    <!-- Erreurs globales -->
+    {% if form.non_field_errors %}
+      <div class="error-message">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <label for="{{ form.nom.id_for_label }}">{{ form.nom.label }}</label>
+    {{ form.nom }}
+    {% if form.nom.errors %}
+      <div class="error-message">{{ form.nom.errors }}</div>
+    {% endif %}
+
+    <label for="{{ form.prenom.id_for_label }}">{{ form.prenom.label }}</label>
+    {{ form.prenom }}
+    {% if form.prenom.errors %}
+      <div class="error-message">{{ form.prenom.errors }}</div>
+    {% endif %}
+
+    <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+    {{ form.username }}
+    {% if form.username.errors %}
+      <div class="error-message">{{ form.username.errors }}</div>
+    {% endif %}
+
+    <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+    {{ form.email }}
+    {% if form.email.errors %}
+      <div class="error-message">{{ form.email.errors }}</div>
+    {% endif %}
+
+    <label for="{{ form.password1.id_for_label }}">{{ form.password1.label }}</label>
+    {{ form.password1 }}
+    {% if form.password1.errors %}
+      <div class="error-message">{{ form.password1.errors }}</div>
+    {% endif %}
+
+    <label for="{{ form.password2.id_for_label }}">{{ form.password2.label }}</label>
+    {{ form.password2 }}
+    {% if form.password2.errors %}
+      <div class="error-message">{{ form.password2.errors }}</div>
+    {% endif %}
+
+    <button type="submit">Créer le compte</button>
+
+    <div class="login-link">
+      Vous avez déjà un compte ? <a href="{% url 'login_citoyen' %}">Se connecter</a>
+    </div>
+  </form>
+
+</body>
+</html>

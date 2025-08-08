@@ -1,50 +1,103 @@
-# core/forms.py
-from django import forms
-from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import get_user_model
+from django import forms
+from django.core.exceptions import ValidationError
+from .models import CodePostale, Citoyen, Agent, Claim, Municipality
 
 User = get_user_model()
 
-class AgentRegisterForm(UserCreationForm):
-    class Meta:
-        model = User
-        fields = ['username', 'email', 'password1', 'password2', 'cin']
-    
-    def clean_username(self):
-        username = self.cleaned_data.get('username')
-        if User.objects.filter(username=username).exists():
-            raise forms.ValidationError("Ce nom d'utilisateur est déjà pris.")
-        return username
-    
-    def clean_email(self):
-        email = self.cleaned_data.get('email')
-        if User.objects.filter(email=email).exists():
-            raise forms.ValidationError("Cet email est déjà utilisé.")
-        return email
-
-class CitizenRegisterForm(UserCreationForm):
-    class Meta:
-        model = User
-        fields = ['username', 'email', 'password1', 'password2']  # Modifiez selon vos besoins
-
-from .models import Claim, Municipality, ClaimType
-
 class ClaimForm(forms.ModelForm):
     class Meta:
-        model = Claim  # Remplacez par votre modèle Claim
-        fields = ['title', 'claim_type', 'municipality', 'description', 'attachment', 'location_lat', 'location_lng']
+        model = Claim
+        fields = ['title', 'description', 'municipality', 'attachment', 'location_lat', 'location_lng']
         widgets = {
             'location_lat': forms.HiddenInput(),
             'location_lng': forms.HiddenInput(),
-            'municipality': forms.Select(attrs={'class': 'form-control'}),
-
         }
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['municipality'].queryset = Municipality.objects.all()
-        self.fields['claim_type'].queryset = ClaimType.objects.all()
-class ProfileForm(forms.ModelForm):
-    class Meta:
-        from .models import Profile  # Importez votre modèle Profile ici
-        model = Profile
-        fields = ['image', 'phone', 'address', 'municipality', 'bio']
+
+class CitoyenRegisterForm(forms.Form):
+    username = forms.CharField(max_length=150, label="Nom d'utilisateur")
+    email = forms.EmailField(label="Adresse e-mail")
+    password1 = forms.CharField(widget=forms.PasswordInput, label="Mot de passe")
+    password2 = forms.CharField(widget=forms.PasswordInput, label="Confirmer le mot de passe")
+    nom = forms.CharField(max_length=80, label="Nom")
+    prenom = forms.CharField(max_length=80, label="Prénom")
+
+    def clean_username(self):
+        username = self.cleaned_data['username']
+        if User.objects.filter(username=username).exists():
+            raise ValidationError("Ce nom d'utilisateur est déjà pris.")
+        return username
+
+    def clean(self):
+        cleaned_data = super().clean()
+        p1 = cleaned_data.get('password1')
+        p2 = cleaned_data.get('password2')
+        if p1 and p2 and p1 != p2:
+            raise ValidationError("Les mots de passe ne correspondent pas.")
+        return cleaned_data
+
+    def save(self):
+        data = self.cleaned_data
+        user = User.objects.create_user(
+            username=data['username'],
+            email=data['email'],
+            password=data['password1']
+        )
+        citoyen = Citoyen.objects.create(
+            user=user,
+            nom=data['nom'],
+            prenom=data['prenom']
+        )
+        return citoyen
+
+class AgentRegisterForm(forms.Form):
+    username = forms.CharField(max_length=150, label="Nom d'utilisateur")
+    email = forms.EmailField(label="Adresse e-mail")
+    password1 = forms.CharField(widget=forms.PasswordInput, label="Mot de passe")
+    password2 = forms.CharField(widget=forms.PasswordInput, label="Confirmer le mot de passe")
+    nom = forms.CharField(max_length=80, label="Nom")
+    prenom = forms.CharField(max_length=80, label="Prénom")
+    cin = forms.CharField(max_length=8, label="CIN")
+    code_postale = forms.ModelChoiceField(
+        queryset=CodePostale.objects.all(),
+        label="Code postal",
+        required=True
+    )
+
+    def clean_username(self):
+        username = self.cleaned_data['username']
+        if User.objects.filter(username=username).exists():
+            raise ValidationError("Ce nom d'utilisateur est déjà pris.")
+        return username
+
+    def clean_cin(self):
+        cin = self.cleaned_data['cin']
+        if not cin.isdigit() or len(cin) != 8:
+            raise ValidationError("Le CIN doit contenir exactement 8 chiffres.")
+        if Agent.objects.filter(cin=cin).exists():
+            raise ValidationError("Ce numéro de CIN est déjà utilisé.")
+        return cin
+
+    def clean(self):
+        cleaned_data = super().clean()
+        p1 = cleaned_data.get('password1')
+        p2 = cleaned_data.get('password2')
+        if p1 and p2 and p1 != p2:
+            raise ValidationError("Les mots de passe ne correspondent pas.")
+        return cleaned_data
+
+    def save(self):
+        data = self.cleaned_data
+        user = User.objects.create_user(
+            username=data['username'],
+            email=data['email'],
+            password=data['password1']
+        )
+        agent = Agent.objects.create(
+            user=user,
+            nom=data['nom'],
+            prenom=data['prenom'],
+            cin=data['cin'],
+            code_postale=data['code_postale']
+        )
+        return agent

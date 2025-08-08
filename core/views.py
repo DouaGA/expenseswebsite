@@ -3,7 +3,6 @@ from django.views import View
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
-from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.db.models import Count, Q, Avg, F
@@ -13,248 +12,111 @@ import json
 import csv
 from openpyxl import Workbook
 from django.urls import reverse
-from .models import User, Claim, ClaimType, Municipality, Profile, PostalCode
-from .forms import AgentRegisterForm, CitizenRegisterForm, ClaimForm, ProfileForm
+from .models import User, Claim, ClaimType, Municipality, CodePostale, Citoyen, Agent
+from .forms import AgentRegisterForm, CitoyenRegisterForm, ClaimForm
 from django.contrib.auth.views import LogoutView as DjangoLogoutView
 from django.contrib.auth.hashers import check_password
 from django.core.serializers import serialize
+from django.urls import reverse_lazy
+from django.views.decorators.http import require_POST
+from django.contrib import messages
+from django.core.exceptions import PermissionDenied
+from django.contrib.auth.models import User
 
-# Vues communes
 def home(request):
-    if request.user.is_authenticated:
-        if request.user.user_type == 'agent':
-            return redirect('core:agent_dashboard')
-        else:
-            return redirect('core:citizen_dashboard')
     return render(request, 'core/home.html')
 
-class LogoutView(DjangoLogoutView):
-    def get_next_page(self):
-        return super().get_next_page()
-    
-def access_denied(request):
-    required_role = request.GET.get('required', '')
-    current_role = request.user.user_type if request.user.is_authenticated else ''
-    
-    if required_role == 'citizen' and current_role == 'agent':
-        return redirect('core:agent_dashboard')
-    elif required_role == 'agent' and current_role == 'citizen':
-        return redirect('core:citizen_dashboard')
-    
-    return render(request, 'core/partials/access_denied.html', {
-        'required_role': required_role,
-        'current_role': current_role
-    })
+def login_agent(request):
+    if request.method == "POST":
+        username = request.POST['username']
+        password = request.POST['password']
 
-class StaffLoginView(View):
-    def get(self, request):
-        if request.user.is_authenticated and request.user.is_staff:
-            return redirect('core:staff_dashboard')
-        return render(request, 'core/staff_login.html', {
-            'next': request.GET.get('next', '')
-        })
-
-    def post(self, request):
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        next_url = request.POST.get('next') or 'core:staff_dashboard'
-        
         user = authenticate(request, username=username, password=password)
-        
-        if user is not None and user.is_staff:
-            login(request, user)
-            return redirect(next_url)
-        
-        messages.error(request, "Identifiants invalides ou vous n'avez pas les droits administrateur.")
-        return render(request, 'core/staff_login.html', {
-            'username': username,
-            'next': next_url
-        })
 
-@login_required
-def staff_dashboard(request):
-    if not request.user.is_staff:
-        return redirect('core:access_denied')
-    
-    users_count = User.objects.count()
-    agents_count = User.objects.filter(user_type='agent').count()
-    citizens_count = User.objects.filter(user_type='citizen').count()
-    
-    return render(request, 'core/staff_dashboard.html', {
-        'users_count': users_count,
-        'agents_count': agents_count,
-        'citizens_count': citizens_count
-    })
-
-def login_selector(request):
-    if request.method == 'GET':
-        if request.user.is_authenticated:
-            if request.user.user_type == 'agent':
-                return redirect('core:agent_dashboard')
-            else:
-                return redirect('core:citizen_dashboard')
-        return render(request, 'core/auth/login_selector.html')
-    return HttpResponseNotAllowed(['GET'])
-
-class AgentLoginView(View):
-    def get(self, request):
-        if request.user.is_authenticated and request.user.user_type == 'agent':
-            return redirect('core:agent_dashboard')
-        return render(request, 'core/auth/agent_login.html', {
-            'next': request.GET.get('next', '')
-        })
-
-    def post(self, request):
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        next_url = request.POST.get('next', 'core:agent_dashboard')
-        
-        user = authenticate(request, username=username, password=password)
-        
-        if user is not None and user.user_type == 'agent':
-            login(request, user)
-            return redirect(next_url)
-        
-        messages.error(request, "Identifiants invalides ou vous n'êtes pas un agent.")
-        return render(request, 'core/auth/agent_login.html', {
-            'username': username,
-            'next': next_url
-        })
-    
-class CitizenLoginView(View):
-    def get(self, request):
-        if request.user.is_authenticated:
-            return redirect('core:citizen_dashboard')
-        return render(request, 'core/auth/citizen_login.html')
-
-    def post(self, request):
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        cin = request.POST.get('cin')
-        
-        try:
-            user = User.objects.get(email=email, cin=cin)
-        except User.DoesNotExist:
-            user = None
-        
-        if user is not None and check_password(password, user.password):
-            if user.user_type == 'citizen':
+        if user is not None:
+            try:
+                agent = Agent.objects.get(user=user)
                 login(request, user)
-                return redirect('core:citizen_dashboard')
-        
-        messages.error(request, "Email, CIN ou mot de passe incorrect")
-        return render(request, 'core/auth/citizen_login.html')
+                request.session['agent_id'] = agent.id
+                return redirect('agent_dashboard')
+            except Agent.DoesNotExist:
+                messages.error(request, "Ce compte n'est pas enregistré comme agent.")
+        else:
+            messages.error(request, "Nom d'utilisateur ou mot de passe incorrect.")
     
-class AgentRegisterView(View):
-    def get(self, request):
-        if request.user.is_authenticated:
-            return redirect('core:agent_dashboard')
-        form = AgentRegisterForm()
-        return render(request, 'core/auth/agent_register.html', {'form': form})
+    return render(request, 'core/login_agent.html')
 
-    def post(self, request):
+def login_citoyen(request):
+    if request.method == "POST":
+        username = request.POST['username']
+        password = request.POST['password']
+        
+        user = authenticate(request, username=username, password=password)
+        
+        if user is not None:
+            try:
+                citoyen = Citoyen.objects.get(user=user)
+                login(request, user)
+                request.session['citoyen_id'] = citoyen.id
+                return redirect('citizen_dashboard')
+            except Citoyen.DoesNotExist:
+                messages.error(request, "Ce compte n'est pas enregistré comme citoyen.")
+        else:
+            messages.error(request, "Nom d'utilisateur ou mot de passe incorrect.")
+    
+    return render(request, 'core/login_citoyen.html')
+
+def signup_citoyen(request):
+    if request.method == 'POST':
+        form = CitoyenRegisterForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('login_citoyen')
+    else:
+        form = CitoyenRegisterForm(request.POST)
+
+    return render(request, 'core/signup_citoyen.html', {'form': form})
+
+def signup_agent(request):
+    if request.method == 'POST':
         form = AgentRegisterForm(request.POST)
         if form.is_valid():
-            user = form.save(commit=False)
-            user.user_type = 'agent'
-            user.save()
-            
-            login(request, user)
-            messages.success(request, "Inscription réussie ! Vous êtes maintenant connecté.")
-            return redirect('core:agent_dashboard')
-        
-        for field, errors in form.errors.items():
-            for error in errors:
-                messages.error(request, f"{field}: {error}")
-        return render(request, 'core/auth/agent_register.html', {'form': form})
-    
-class CitizenRegisterView(View):
-    def get(self, request):
-        if request.user.is_authenticated:
-            return redirect('core:citizen_dashboard')
-        form = CitizenRegisterForm()
-        return render(request, 'core/auth/citizen_register.html', {'form': form})
+            form.save()
+            return redirect('login_agent')
+    else:
+        form = AgentRegisterForm()
+    return render(request, 'core/signup_agent.html', {'form': form})
 
-    def post(self, request):
-        form = CitizenRegisterForm(request.POST)
-        if form.is_valid():
-            user = form.save(commit=False)
-            user.user_type = 'citizen'
-            user.save()
-            messages.success(request, "Compte citoyen créé avec succès! Connectez-vous maintenant.")
-            return redirect('core:citizen_login')
-        
-        return render(request, 'core/auth/citizen_register.html', {'form': form})
-    
-# Vues pour les agents
+@login_required
+def citizen_dashboard(request):
+    claims = request.user.claims.all()
+    context = {
+        'pending_claims': claims.filter(status=Claim.PENDING),
+        'accepted_claims': claims.filter(status=Claim.ACCEPTED),
+        'rejected_claims': claims.filter(status=Claim.REJECTED),
+    }
+    return render(request, 'core/citizen_dashboard.html', context)
+
 @login_required
 def agent_dashboard(request):
-    if request.user.user_type != 'agent':
-        return redirect('core:access_denied')
-    
-    total_claims = Claim.objects.count()
-    pending_count = Claim.objects.filter(status='pending').count()
-    accepted_count = Claim.objects.filter(status='accepted').count()
-    rejected_count = Claim.objects.filter(status='rejected').count()
-    
-    pending_percentage = round((pending_count / total_claims * 100)) if total_claims > 0 else 0
-    accepted_percentage = round((accepted_count / total_claims * 100)) if total_claims > 0 else 0
-    rejected_percentage = round((rejected_count / total_claims * 100)) if total_claims > 0 else 0
-    
-    pending_claims = Claim.objects.filter(status='pending').order_by('-created_at')[:5]
-    accepted_claims = Claim.objects.filter(status='accepted').order_by('-created_at')[:5]
-    rejected_claims = Claim.objects.filter(status='rejected').order_by('-created_at')[:5]
-    
-    last_30_days = timezone.now() - timedelta(days=30)
-    
-    daily_counts = (
-        Claim.objects
-        .filter(created_at__gte=last_30_days)
-        .annotate(date=TruncDate('created_at'))
-        .values('date')
-        .annotate(count=Count('id'))
-        .order_by('date')
-    )
-    
-    dates = [str(day['date'].strftime('%d/%m')) for day in daily_counts]
-    daily_counts_data = [day['count'] for day in daily_counts]
-    
-    claim_types = ClaimType.objects.annotate(count=Count('claim'))
-    type_labels = [ct.name for ct in claim_types]
-    type_data = [ct.count for ct in claim_types]
-    
-    status_labels = ['En attente', 'Acceptées', 'Rejetées']
-    status_data = [pending_count, accepted_count, rejected_count]
-    
-    municipalities = Municipality.objects.all()
-    
-    has_data = total_claims > 0
-    
-    return render(request, 'core/agent/agent_dashboard.html', {
-        'total_claims': total_claims,
-        'total_pending': pending_count,
-        'total_accepted': accepted_count,
-        'total_rejected': rejected_count,
-        'pending_percentage': pending_percentage,
-        'accepted_percentage': accepted_percentage,
-        'rejected_percentage': rejected_percentage,
-        'pending_claims': pending_claims,
-        'accepted_claims': accepted_claims,
-        'rejected_claims': rejected_claims,
-        'dates': json.dumps(dates),
-        'daily_counts': json.dumps(daily_counts_data),
-        'type_labels': json.dumps(type_labels),
-        'type_data': json.dumps(type_data),
-        'status_labels': json.dumps(status_labels),
-        'status_data': json.dumps(status_data),
-        'municipalities': municipalities,
-        'has_data': has_data
-    })
+    claims = Claim.objects.all()
+    context = {
+        'total_claims': claims.count(),
+        'pending_claims': claims.filter(status=Claim.PENDING),
+        'accepted_claims': claims.filter(status=Claim.ACCEPTED),
+        'rejected_claims': claims.filter(status=Claim.REJECTED),
+    }
+    return render(request, 'core/agent_dashboard.html', context)
+
+class LogoutView(View):
+    def get(self, request):
+        logout(request)
+        return redirect('home')
 
 @login_required
 def claims_list(request):
     if request.user.user_type != 'agent':
-        return redirect('core:access_denied')
+        return redirect('access_denied')
     
     claims = Claim.objects.all().order_by('-created_at')
     status_filter = request.GET.get('status', 'all')
@@ -263,44 +125,39 @@ def claims_list(request):
     
     municipalities = Municipality.objects.all()
     
-    return render(request, 'core/agent/claims_list.html', {
+    return render(request, 'core/claims_list.html', {
         'claims': claims,
         'status_filter': status_filter,
         'municipalities': municipalities
     })
 
-@login_required
-def claim_detail(request, pk):
-    claim = get_object_or_404(Claim, id=pk)
-    
-    if request.user.user_type == 'citizen' and claim.created_by != request.user:
-        return redirect('core:access_denied')
-    
-    municipalities = Municipality.objects.all()
-    
-    return render(request, 'core/agent/claim_detail.html', {
-        'claim': claim,
-        'municipalities': municipalities
-    })
+def agent_claim_detail(request, pk):
+    claim = get_object_or_404(Claim, pk=pk)
+    if not request.user.user_type == 'agent':
+        raise PermissionDenied 
+    return render(request, 'core/agent_claim_detail.html', {'claim': claim})
+
+def citizen_claim_detail(request, pk):
+    claim = get_object_or_404(Claim, pk=pk)
+    if claim.created_by != request.user:
+        raise PermissionDenied 
+    return render(request, 'core/citizen_claim_detail.html', {'claim': claim})
 
 @login_required
 def claims_map(request):
     if request.user.user_type != 'agent':
-        return redirect('core:access_denied')
+        return redirect('access_denied')
     
     claims = Claim.objects.all()
     municipalities = Municipality.objects.all()
     
-    return render(request, 'core/agent/claims_map.html', {
+    return render(request, 'core/claims_map.html', {
         'claims': claims,
         'municipalities': municipalities
     })
 
 @login_required
 def export_claims(request):
-    if request.user.user_type != 'agent':
-        return redirect('core:access_denied')
-    
     if request.method == 'POST':
         format_type = request.POST.get('format')
         status = request.POST.get('status', 'all')
@@ -348,51 +205,23 @@ def export_claims(request):
     
     return HttpResponse('Invalid request', status=400)
 
-# Vues pour les citoyens
-@login_required
-def citizen_dashboard(request):
-    if not hasattr(request.user, 'user_type') or request.user.user_type != 'citizen':
-        return redirect(reverse('core:access_denied') + f'?required=citizen')
-    
-    claims = request.user.claims.all()
-    stats = {
-        'total': claims.count(),
-        'accepted': claims.filter(status='accepted').count(),
-        'pending': claims.filter(status='pending').count(),
-        'rejected': claims.filter(status='rejected').count(),
-    }
-    
-    municipalities = Municipality.objects.all()
-    
-    return render(request, 'core/citizen/citizen_dashboard.html', {
-        'stats': stats,
-        'pending_claims': Claim.objects.filter(status='pending').select_related('claim_type').defer('attachment'),     
-        'accepted_claims': claims.filter(status='accepted'),
-        'rejected_claims': claims.filter(status='rejected'),
-        'municipalities': municipalities
-    })
-
 @login_required
 def create_claim(request):
-    municipalities = Municipality.objects.all().order_by('name')  # Chargement simple
-    print(f"Municipalités chargées : {list(municipalities.values_list('name', flat=True))}")  # Debug
-
     if request.method == 'POST':
         form = ClaimForm(request.POST, request.FILES)
         if form.is_valid():
             claim = form.save(commit=False)
             claim.created_by = request.user
             claim.save()
-            return redirect('core:citizen_dashboard')
+            return redirect('citizen_dashboard')
     else:
         form = ClaimForm()
-
-    return render(request, 'core/citizen/create_claim.html', {
+    
+    return render(request, 'core/create_claim.html', {
         'form': form,
-        'municipalities': municipalities
+        'municipalities': Municipality.objects.all()
     })
 
-# Vues pour les profils
 @login_required
 def profile_view(request):
     edit_mode = request.GET.get('edit', False)
@@ -402,11 +231,11 @@ def profile_view(request):
         form = ProfileForm(request.POST, request.FILES, instance=request.user.profile)
         if form.is_valid():
             form.save()
-            return redirect('core:agent_profile')
+            return redirect('profile')
     else:
         form = ProfileForm(instance=request.user.profile)
     
-    return render(request, 'core/agent/profile.html', {
+    return render(request, 'core/profile.html', {
         'edit_mode': edit_mode,
         'form': form,
         'user': request.user,
@@ -421,11 +250,11 @@ def edit_profile(request):
         form = ProfileForm(request.POST, request.FILES, instance=request.user.profile)
         if form.is_valid():
             form.save()
-            return redirect('core:agent_profile')
+            return redirect('profile')
     else:
         form = ProfileForm(instance=request.user.profile)
     
-    return render(request, 'profile.html', {
+    return render(request, 'core/profile.html', {
         'edit_mode': True,
         'form': form,
         'user': request.user,
@@ -434,9 +263,6 @@ def edit_profile(request):
 
 @login_required
 def stats_view(request):
-    if request.user.user_type != 'agent':
-        return redirect('core:access_denied')
-    
     total_claims = Claim.objects.count()
     processed_claims = Claim.objects.exclude(status='pending').count()
     processing_rate = round((processed_claims / total_claims * 100)) if total_claims > 0 else 0
@@ -482,7 +308,7 @@ def stats_view(request):
         .order_by('-updated_at')[:20]
     )
     
-    return render(request, 'core/agent/stats.html', {
+    return render(request, 'core/stats.html', {
         'processing_rate': processing_rate,
         'rejection_rate': rejection_rate,
         'avg_processing_time': avg_processing_time,
@@ -498,9 +324,6 @@ def stats_view(request):
 
 @login_required
 def update_claim_status(request, pk, status):
-    if request.user.user_type != 'agent':
-        return redirect('core:access_denied')
-    
     claim = get_object_or_404(Claim, id=pk)
     
     if request.method == 'POST':
@@ -517,42 +340,42 @@ def update_claim_status(request, pk, status):
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'success': False, 'error': 'Invalid request'})
     
-    return redirect('core:claim_detail', pk=claim.id)
-
-def create_claim_view(request):
-    existing_claims = Claim.objects.all()
-    existing_claims_json = serialize('json', existing_claims)
-    existing_claims_data = json.loads(existing_claims_json)
-    
-    simplified_claims = []
-    for claim in existing_claims_data:
-        simplified_claims.append({
-            'title': claim['fields']['title'],
-            'claim_type': claim['fields']['claim_type'],
-            'description': claim['fields']['description'],
-            'location_lat': claim['fields']['location_lat'],
-            'location_lng': claim['fields']['location_lng']
-        })
-    
-    municipalities = Municipality.objects.all()
-    
-    context = {
-        'form': YourClaimForm(),
-        'existing_claims_json': json.dumps(simplified_claims),
-        'municipalities': municipalities
-    }
-    
-    return render(request, 'create_claim.html', context)
+    return redirect('agent_claim_detail', pk=claim.id)
 
 def get_cites(request):
     gov = request.GET.get('gov')
-    cites = PostalCode.objects.filter(gov=gov).values_list('cite', flat=True).distinct()
+    cites = CodePostale.objects.filter(gov=gov).values_list('cite', flat=True).distinct()
     return JsonResponse(list(cites), safe=False)
 
-def example_view(request):
-    gouvernorats = PostalCode.objects.values_list('gov', flat=True).distinct()
-    municipalities = Municipality.objects.all()
-    return render(request, 'core/example_form.html', {
-        'gouvernorats': gouvernorats,
-        'municipalities': municipalities
+@login_required
+def edit_claim(request, pk):
+    claim = get_object_or_404(Claim, pk=pk, created_by=request.user)
+    if request.method == 'POST':
+        form = ClaimForm(request.POST, request.FILES, instance=claim)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Réclamation mise à jour avec succès!")
+            return redirect('citizen_dashboard')
+    else:
+        form = ClaimForm(instance=claim)
+    
+    return render(request, 'core/edit_claim.html', {
+        'form': form,
+        'claim': claim,
+        'municipalities': Municipality.objects.all()
+    })
+
+@login_required
+@require_POST
+def delete_claim(request, pk):
+    claim = get_object_or_404(Claim, pk=pk, created_by=request.user)
+    claim.delete()
+    messages.success(request, "Réclamation supprimée avec succès!")
+    return redirect('citizen_dashboard')
+
+@login_required
+def check_user_type(request):
+    return JsonResponse({
+        'user_type': request.user.user_type,
+        'is_authenticated': request.user.is_authenticated
     })

@@ -1,0 +1,516 @@
+
+{% block title %}Carte Interactive des Réclamations{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+<style>
+    :root {
+        --primary-color: #4361ee;
+        --secondary-color: #3f37c9;
+        --accent-color: #4895ef;
+        --dark-color: #2b2d42;
+        --light-color: #f8f9fa;
+        --success-color: #4cc9f0;
+        --warning-color: #f8961e;
+        --danger-color: #f72585;
+    }
+    
+    #map {
+        height: 70vh;
+        width: 100%;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    
+    #map:hover {
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .marker-icon {
+        background-color: var(--primary-color);
+        border-radius: 50%;
+        border: 3px solid white;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 12px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    
+    .marker-icon:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+    
+    .pending {
+        background-color: var(--warning-color);
+    }
+    
+    .accepted {
+        background-color: var(--success-color);
+    }
+    
+    .rejected {
+        background-color: var(--danger-color);
+    }
+    
+    .info-window {
+        min-width: 280px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .info-window h5 {
+        color: var(--dark-color);
+        border-bottom: 2px solid var(--primary-color);
+        padding-bottom: 8px;
+        margin-bottom: 12px;
+    }
+    
+    .info-window img {
+        border-radius: 6px;
+        margin-top: 10px;
+        transition: transform 0.3s ease;
+    }
+    
+    .info-window img:hover {
+        transform: scale(1.03);
+    }
+    
+    .filter-container {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+    }
+    
+    .filter-container:hover {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .waste-icon {
+        width: 20px;
+        height: 20px;
+        margin-right: 8px;
+        display: inline-block;
+        vertical-align: middle;
+    }
+    
+    .search-btn {
+        height: 42px;
+        margin-top: 32px;
+        transition: all 0.3s ease;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+    }
+    
+    .search-btn:hover {
+        transform: translateY(-2px);
+    }
+    
+    .legend {
+        padding: 12px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.15);
+        line-height: 1.6;
+        font-size: 14px;
+    }
+    
+    .legend i {
+        width: 18px;
+        height: 18px;
+        float: left;
+        margin-right: 8px;
+        border-radius: 3px;
+    }
+    
+    .leaflet-popup-content-wrapper {
+        border-radius: 8px !important;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2) !important;
+        transition: all 0.3s ease;
+    }
+    
+    .leaflet-popup-content-wrapper:hover {
+        box-shadow: 0 8px 25px rgba(0,0,0,0.25) !important;
+    }
+    
+    .leaflet-popup-tip {
+        box-shadow: none !important;
+    }
+    
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .badge-pending {
+        background-color: var(--warning-color);
+        color: white;
+    }
+    
+    .badge-accepted {
+        background-color: var(--success-color);
+        color: white;
+    }
+    
+    .badge-rejected {
+        background-color: var(--danger-color);
+        color: white;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+    }
+    
+    .action-buttons .btn {
+        flex: 1;
+        font-size: 13px;
+        padding: 6px 12px;
+        transition: all 0.3s ease;
+    }
+    
+    .action-buttons .btn:hover {
+        transform: translateY(-2px);
+    }
+    
+    @media (max-width: 768px) {
+        #map {
+            height: 60vh;
+        }
+        
+        .search-btn {
+            margin-top: 15px;
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2"><i class="fas fa-map-marked-alt mr-2"></i>Carte Interactive des Signalements</h1>
+    </div>
+
+    <div class="filter-container">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="status-filter" class="font-weight-bold">Statut</label>
+                    <select id="status-filter" class="form-control">
+                        <option value="all">Tous statuts</option>
+                        <option value="pending">En attente</option>
+                        <option value="accepted">Acceptées</option>
+                        <option value="rejected">Rejetées</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="type-filter" class="font-weight-bold">Type :</label>
+                    <select id="type-filter" class="form-control">
+                        <option value="all">Tous types</option>
+                        <optgroup label="Déchets">
+                            <option value="plastic">Plastique</option>
+                            <option value="glass">Verre</option>
+                            <option value="paper">Papier/Carton</option>
+                            <option value="metal">Métal</option>
+                            <option value="organic">Organique</option>
+                            <option value="electronic">Électronique</option>
+                            <option value="hazardous">Dangereux</option>
+                            <option value="construction">BTP</option>
+                        </optgroup>
+                        <optgroup label="Autres">
+                            <option value="hole">Puits/Trou</option>
+                            <option value="illegal_dumping">Dépôt sauvage</option>
+                            <option value="water">Problème eau</option>
+                            <option value="other">Autre</option>
+                        </optgroup>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="date-filter" class="font-weight-bold">Date</label>
+                    <input type="date" id="date-filter" class="form-control">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <button id="search-btn" class="btn btn-primary search-btn">
+                    <i class="fas fa-search mr-2"></i> Rechercher
+                </button>
+                <button id="reset-btn" class="btn btn-outline-secondary search-btn ml-2">
+                    <i class="fas fa-undo mr-2"></i> Réinitialiser
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="map"></div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialisation de la carte
+    const map = L.map('map').setView([36.7525, 3.0420], 12);
+    
+    // Couche OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    // Dictionnaire des marqueurs
+    let markers = {};
+    
+    // Icônes personnalisées
+    function createCustomIcon(claim) {
+        const statusClass = claim.status === 'pending' ? 'pending' : 
+                          claim.status === 'accepted' ? 'accepted' : 'rejected';
+        
+        const typeColors = {
+            'plastic': '#0095B6',
+            'glass': '#00B34D',
+            'paper': '#FFD700',
+            'metal': '#A9A9A9',
+            'organic': '#8B4513',
+            'electronic': '#00008B',
+            'hazardous': '#FF0000',
+            'construction': '#696969',
+            'hole': '#8B0000',
+            'illegal_dumping': '#4B0082',
+            'water': '#1E90FF',
+            'other': '#800080'
+        };
+        
+        // Correction: Vérification plus robuste du type de réclamation
+        const claimType = (typeof claim.claim_type === 'string') ? claim.claim_type.toLowerCase() : 'other';
+        const color = typeColors[claimType] || '#3388ff';
+        
+        const iconHtml = `
+            <div class="marker-icon ${statusClass}" style="background-color: ${color}">
+                ${claimType.charAt(0).toUpperCase()}
+            </div>
+        `;
+        
+        return L.divIcon({
+            html: iconHtml,
+            className: 'custom-marker',
+            iconSize: [32, 32],
+            popupAnchor: [0, -15]
+        });
+    }
+
+    // Ajouter une légende
+    function addLegend() {
+        const legend = L.control({position: 'bottomright'});
+
+        legend.onAdd = function(map) {
+            const div = L.DomUtil.create('div', 'legend');
+            const types = {
+                'plastic': 'Plastique',
+                'glass': 'Verre',
+                'paper': 'Papier',
+                'metal': 'Métal',
+                'organic': 'Organique',
+                'electronic': 'Électronique',
+                'hazardous': 'Dangereux',
+                'construction': 'BTP',
+                'hole': 'Puits/Trou',
+                'illegal_dumping': 'Dépôt sauvage',
+                'water': 'Problème eau',
+                'other': 'Autre'
+            };
+            const colors = {
+                'plastic': '#0095B6',
+                'glass': '#00B34D',
+                'paper': '#FFD700',
+                'metal': '#A9A9A9',
+                'organic': '#8B4513',
+                'electronic': '#00008B',
+                'hazardous': '#FF0000',
+                'construction': '#696969',
+                'hole': '#8B0000',
+                'illegal_dumping': '#4B0082',
+                'water': '#1E90FF',
+                'other': '#800080'
+            };
+
+            let labels = ['<strong>Types de signalement</strong><br>'];
+            
+            for (const type in types) {
+                labels.push(
+                    `<i style="background:${colors[type]}"></i> ${types[type]}`
+                );
+            }
+            
+            labels.push('<br><strong>Statuts</strong><br>');
+            labels.push('<i style="background:#ffc107"></i> En attente');
+            labels.push('<i style="background:#28a745"></i> Accepté');
+            labels.push('<i style="background:#dc3545"></i> Rejeté');
+
+            div.innerHTML = labels.join('<br>');
+            return div;
+        };
+
+        legend.addTo(map);
+    }
+
+    // Charger les signalements avec filtres
+    function loadClaims() {
+        const status = document.getElementById('status-filter').value;
+        const claimType = document.getElementById('type-filter').value;
+        const date = document.getElementById('date-filter').value;
+        
+        let url = '/api/claims/?';
+        if (status !== 'all') url += `status=${status}&`;
+        if (claimType !== 'all') url += `type=${claimType}&`;
+        if (date) url += `date=${date}`;
+        
+        // Supprimer les marqueurs existants
+        Object.values(markers).forEach(marker => {
+            map.removeLayer(marker);
+        });
+        markers = {};
+        
+        // Afficher un loader pendant le chargement
+        const loader = L.marker(map.getCenter(), {
+            icon: L.divIcon({
+                html: '<div class="spinner-border text-primary"></div>',
+                className: 'loader-marker',
+                iconSize: [40, 40]
+            })
+        }).addTo(map);
+        
+        // Requête AJAX avec meilleure gestion des erreurs
+        fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            map.removeLayer(loader);
+            
+            if (!Array.isArray(data)) {
+                throw new Error('Données reçues invalides');
+            }
+
+            data.forEach(claim => {
+                if (!claim.location_lat || !claim.location_lng) {
+                    console.warn('Signalement sans coordonnées:', claim);
+                    return;
+                }
+
+                const marker = L.marker(
+                    [claim.location_lat, claim.location_lng],
+                    { 
+                        icon: createCustomIcon(claim),
+                        claim: claim
+                    }
+                ).addTo(map);
+                
+                const popupContent = `
+                    <div class="info-window">
+                        <h5>${claim.title || 'Signalement sans titre'}</h5>
+                        <p><strong>Type:</strong> ${claim.claim_type || 'Non spécifié'}</p>
+                        <p><strong>Statut:</strong> 
+                            <span class="status-badge badge-${claim.status}">${claim.status}</span>
+                        </p>
+                        <p><strong>Date:</strong> ${new Date(claim.created_at).toLocaleDateString()}</p>
+                        ${claim.description ? `<p><strong>Description:</strong> ${claim.description.substring(0, 100)}${claim.description.length > 100 ? '...' : ''}</p>` : ''}
+                        
+                        <div class="action-buttons">
+                            <a href="/claims/${claim.id}" class="btn btn-info">
+                                <i class="fas fa-eye mr-1"></i> Voir détails
+                            </a>
+                        </div>
+                    </div>
+                `;
+                
+                marker.bindPopup(popupContent);
+                markers[claim.id] = marker;
+            });
+            
+            // Ajuster la vue de la carte si des marqueurs existent
+            if (Object.keys(markers).length > 0) {
+                const markerGroup = new L.featureGroup(Object.values(markers));
+                map.fitBounds(markerGroup.getBounds());
+            } else {
+                showNoResultsMessage();
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            map.removeLayer(loader);
+            showErrorMessage(error.message || 'Erreur de chargement des données');
+        });
+    }
+
+    function showNoResultsMessage() {
+        L.marker(map.getCenter(), {
+            icon: L.divIcon({
+                html: '<div class="alert alert-info">Aucun résultat trouvé</div>',
+                className: 'info-marker',
+                iconSize: [200, 50]
+            })
+        }).addTo(map).bindPopup(`
+            <div class="alert alert-info">
+                <p>Aucun signalement ne correspond à vos critères de recherche</p>
+            </div>
+        `).openPopup();
+    }
+
+    function showErrorMessage(message) {
+        L.marker(map.getCenter(), {
+            icon: L.divIcon({
+                html: '<div class="alert alert-danger">Erreur de chargement</div>',
+                className: 'error-marker',
+                iconSize: [200, 50]
+            })
+        }).addTo(map).bindPopup(`
+            <div class="alert alert-danger">
+                <p>${message}</p>
+                <button onclick="location.reload()" class="btn btn-sm btn-warning mt-2">
+                    <i class="fas fa-sync-alt mr-1"></i> Réessayer
+                </button>
+            </div>
+        `).openPopup();
+    }
+
+    // Réinitialiser les filtres
+    function resetFilters() {
+        document.getElementById('status-filter').value = 'all';
+        document.getElementById('type-filter').value = 'all';
+        document.getElementById('date-filter').value = '';
+        loadClaims();
+    }
+
+    // Écouteurs d'événements
+    document.getElementById('search-btn').addEventListener('click', loadClaims);
+    document.getElementById('reset-btn').addEventListener('click', resetFilters);
+
+    // Chargement initial
+    loadClaims();
+    addLegend();
+});
+</script>
+{% endblock %}

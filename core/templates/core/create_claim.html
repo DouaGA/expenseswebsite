@@ -1,0 +1,360 @@
+{% load static %}
+{% load crispy_forms_tags %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nouvelle Réclamation</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+          integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+          crossorigin=""/>
+    <style>
+        /* Styles pour la carte */
+        #map {
+            height: 400px !important;
+            width: 100%;
+            margin: 15px 0;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            background: #f8f9fa;
+            z-index: 1;
+        }
+        
+        .leaflet-container {
+            height: 100% !important;
+            min-height: 400px;
+        }
+        
+        .location-btn {
+            margin-bottom: 15px;
+        }
+        
+        .form-section {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .custom-marker {
+            background-color: #4361ee;
+            border-radius: 50%;
+            border: 3px solid white;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .leaflet-top {
+            z-index: 1000;
+        }
+        
+        .leaflet-control {
+            z-index: 1000;
+        }
+        
+        .existing-claim-marker {
+            background-color: #f72585;
+            border-radius: 50%;
+            border: 3px solid white;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        #map-fallback {
+            display: none;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+        }
+
+        #map-loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1001;
+        }
+
+        /* Header styles to match citizen_dashboard */
+        .dashboard-header {
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+
+        .container {
+            padding-top: 20px;
+            padding-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="container-fluid">
+                <div class="d-flex justify-content-between align-items-center py-3">
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-plus-circle me-2"></i>Nouvelle Réclamation
+                    </h1>
+                    <a href="{% url 'citizen_dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Retour
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="form-section">
+                        <form method="POST" enctype="multipart/form-data" id="claim-form">
+                            {% csrf_token %}
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    {{ form.title|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="id_claim_type" class="form-label">Type de réclamation*</label>
+                                        <select name="claim_type" class="form-select" id="id_claim_type" required>
+                                            <option value="">--- CHOISIR ---</option>
+                                            <option value="6">Trottoir dégradé ou impraticable</option>
+                                            <option value="10">Espaces verts non entretenus</option>
+                                            <option value="14">Éclairage insuffisant dans une zone</option>
+                                            <option value="16">Dégradation d'un bâtiment public</option>
+                                            <option value="17">Clôture ou mur endommagé</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                  <div class="mb-3">
+                                    <label for="id_municipality" class="form-label">Municipalité*</label>
+                                    <select name="municipality" class="form-select" id="id_municipality" required>
+                                      <option value="">--- CHOISIR ---</option>
+                                      {% for mun in municipalities %}
+                                      <option value="{{ mun.id }}">{{ mun.name }}</option>
+                                      {% empty %}
+                                      <option value="">Aucune municipalité trouvée</option>
+                                      {% endfor %}
+                                    </select>
+                                  </div>
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.attachment|as_crispy_field }}
+                                </div>
+                            </div>
+                            
+                            {{ form.description|as_crispy_field }}
+                            
+                            <div class="mb-4">
+                                <h5 class="mb-3">
+                                    <i class="fas fa-map-marker-alt me-2"></i>Localisation
+                                </h5>
+                                <div id="map-container" style="position:relative;">
+                                    <div id="map-loading">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Chargement...</span>
+                                        </div>
+                                        <p class="mt-2">Chargement de la carte...</p>
+                                    </div>
+                                    <div id="map"></div>
+                                    <div id="map-fallback">
+                                        <p class="text-danger">Le chargement de la carte a échoué. Veuillez recharger la page.</p>
+                                        <button onclick="window.location.reload()" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-sync-alt me-1"></i> Recharger
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between mt-2">
+                                    <button type="button" id="locate-btn" class="btn btn-outline-primary">
+                                        <i class="fas fa-location-arrow me-1"></i> Utiliser ma position actuelle
+                                    </button>
+                                    <small class="text-muted">Ou cliquez sur la carte pour sélectionner un emplacement</small>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        {{ form.location_lat|as_crispy_field }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.location_lng|as_crispy_field }}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-end mt-4">
+                                <button type="reset" class="btn btn-outline-secondary me-2">
+                                    <i class="fas fa-eraser me-1"></i> Effacer
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane me-1"></i> Soumettre la réclamation
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+            integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+            crossorigin=""></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialisation de la carte
+        const map = L.map('map').setView([36.7525, 3.0420], 13);
+        
+        // Couche OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        let marker = null;
+        const latInput = document.getElementById('id_location_lat');
+        const lngInput = document.getElementById('id_location_lng');
+
+        // Gestion du clic sur la carte
+        map.on('click', function(e) {
+            if (marker) {
+                map.removeLayer(marker);
+            }
+            
+            marker = L.marker(e.latlng, {
+                draggable: true,
+                icon: L.icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                })
+            }).addTo(map);
+            
+            // Mise à jour des champs de formulaire
+            latInput.value = e.latlng.lat;
+            lngInput.value = e.latlng.lng;
+            
+            marker.on('dragend', function(event) {
+                const position = marker.getLatLng();
+                latInput.value = position.lat;
+                lngInput.value = position.lng;
+            });
+        });
+
+        // Bouton de géolocalisation
+        document.getElementById('locate-btn').addEventListener('click', function() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const userLatLng = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        
+                        if (marker) {
+                            map.removeLayer(marker);
+                        }
+                        
+                        marker = L.marker(userLatLng, {
+                            draggable: true,
+                            icon: L.icon({
+                                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+                                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                                iconSize: [25, 41],
+                                iconAnchor: [12, 41],
+                                popupAnchor: [1, -34],
+                                shadowSize: [41, 41]
+                            })
+                        }).addTo(map);
+                        
+                        map.setView(userLatLng, 15);
+                        latInput.value = userLatLng.lat;
+                        lngInput.value = userLatLng.lng;
+                        
+                        marker.on('dragend', function(event) {
+                            const position = marker.getLatLng();
+                            latInput.value = position.lat;
+                            lngInput.value = position.lng;
+                        });
+                    },
+                    function(error) {
+                        alert("Erreur de géolocalisation : " + error.message);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 5000,
+                        maximumAge: 0
+                    }
+                );
+            } else {
+                alert("La géolocalisation n'est pas supportée par votre navigateur.");
+            }
+        });
+
+        // Validation du formulaire
+        document.getElementById('claim-form').addEventListener('submit', function(e) {
+            if (!latInput.value || !lngInput.value) {
+                e.preventDefault();
+                alert('Veuillez sélectionner une localisation sur la carte');
+                return false;
+            }
+            return true;
+        });
+
+        // Masquer le loader
+        document.getElementById('map-loading').style.display = 'none';
+
+        // Vérification du chargement de la carte
+        setTimeout(() => {
+            if (!document.querySelector('.leaflet-layer')) {
+                document.getElementById('map-fallback').style.display = 'block';
+                document.getElementById('map-loading').style.display = 'none';
+                console.error("Erreur: La carte Leaflet n'a pas pu charger");
+            }
+        }, 5000);
+    });
+    </script>
+</body>
+</html>

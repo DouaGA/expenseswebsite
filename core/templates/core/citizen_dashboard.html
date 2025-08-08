@@ -1,0 +1,636 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Tableau de Bord Citoyen{% endblock %}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Base Styles */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+
+        .dashboard-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .dashboard-header {
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        /* Stats Cards */
+        .stat-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 8px;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .border-left-primary {
+            border-left: 4px solid #4e73df;
+        }
+
+        .border-left-success {
+            border-left: 4px solid #1cc88a;
+        }
+
+        .border-left-warning {
+            border-left: 4px solid #f6c23e;
+        }
+
+        .border-left-danger {
+            border-left: 4px solid #e74a3b;
+        }
+
+        /* Tabs */
+        .nav-tabs .nav-link {
+            color: #6c757d;
+            border: none;
+            padding: 12px 20px;
+            font-weight: 500;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #4e73df;
+            background-color: transparent;
+            border-bottom: 3px solid #4e73df;
+        }
+
+        /* Tables */
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            border-top: none;
+            font-weight: 600;
+            color: #4e73df;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state i {
+            color: #d1d3e2;
+        }
+
+        /* Map */
+        #claimsMap {
+            height: 500px;
+            width: 100%;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            min-height: 300px;
+        }
+
+        /* Floating Button */
+        .btn-floating {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-header {
+                padding: 10px 0;
+            }
+            
+            .stat-card {
+                margin-bottom: 15px;
+            }
+            
+            .nav-tabs .nav-link {
+                padding: 8px 12px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="container-fluid">
+                <div class="d-flex justify-content-between align-items-center py-3">
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-tachometer-alt me-2"></i>Tableau de Bord
+                    </h1>
+                    <div class="d-flex">
+                        {% if user.is_authenticated %}
+                        <a href="{% url 'create_claim' %}" class="btn btn-primary me-2">
+                            <i class="fas fa-plus me-1"></i> Nouvelle Réclamation
+                        </a>
+                        <a href="{% url 'logout' %}" class="btn btn-outline-danger">
+                            <i class="fas fa-sign-out-alt me-1"></i> Déconnexion
+                        </a>
+                        {% else %}
+                        <a href="{% url 'core:login_citoyen' %}" class="btn btn-primary me-2">
+                            <i class="fas fa-sign-in-alt me-1"></i> Connexion
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <div class="container-fluid px-4">
+                <!-- Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card stat-card border-left-primary h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                            Total Réclamations</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ pending_claims.count|add:accepted_claims.count|add:rejected_claims.count }}</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card stat-card border-left-success h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                            Acceptées</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ accepted_claims.count }}</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card stat-card border-left-warning h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                            En Attente</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ pending_claims.count }}</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-hourglass-half fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card stat-card border-left-danger h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                            Rejetées</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ rejected_claims.count }}</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <ul class="nav nav-tabs card-header-tabs" id="claimsTab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">
+                                    <i class="fas fa-hourglass-half me-1"></i> En Attente
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="accepted-tab" data-bs-toggle="tab" data-bs-target="#accepted" type="button" role="tab">
+                                    <i class="fas fa-check-circle me-1"></i> Acceptées
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="rejected-tab" data-bs-toggle="tab" data-bs-target="#rejected" type="button" role="tab">
+                                    <i class="fas fa-times-circle me-1"></i> Rejetées
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="map-tab" data-bs-toggle="tab" data-bs-target="#map" type="button" role="tab">
+                                    <i class="fas fa-map-marked-alt me-1"></i> Carte
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-body">
+                        <div class="tab-content" id="claimsTabContent">
+                            <!-- Pending Claims -->
+                            <div class="tab-pane fade show active" id="pending" role="tabpanel">
+                                {% if pending_claims %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Titre</th>
+                                                <th>Type</th>
+                                                <th>Date</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for claim in pending_claims %}
+                                            <tr>
+                                                <td>{{ claim.id }}</td>
+                                                <td>{{ claim.title }}</td>
+                                                <td>{{ claim.claim_type.name|default:"-" }}</td>
+                                                <td>{{ claim.created_at|date:"d/m/Y H:i" }}</td>
+                                                <td>
+                                                    <div class="btn-group" role="group">
+                                                        <a href="{% url 'core:citizen_claim_detail' claim.id %}" class="btn btn-sm btn-info" title="Détails">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                        <a href="{% url 'core:edit_claim' claim.id %}" class="btn btn-sm btn-warning" title="Modifier">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                        <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ claim.id }}" title="Supprimer">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                    
+                                                    <!-- Delete Modal -->
+                                                    <div class="modal fade" id="deleteModal{{ claim.id }}" tabindex="-1" aria-hidden="true">
+                                                        <div class="modal-dialog">
+                                                            <div class="modal-content">
+                                                                <div class="modal-header bg-danger text-white">
+                                                                    <h5 class="modal-title">Confirmer la suppression</h5>
+                                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                </div>
+                                                                <div class="modal-body">
+                                                                    <p>Êtes-vous sûr de vouloir supprimer la réclamation :</p>
+                                                                    <p><strong>"{{ claim.title }}"</strong> ?</p>
+                                                                    <p class="text-muted">Cette action est irréversible.</p>
+                                                                </div>
+                                                                <div class="modal-footer">
+                                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                                    <form action="{% url 'core:delete_claim' claim.id %}" method="POST">
+                                                                        {% csrf_token %}
+                                                                        <button type="submit" class="btn btn-danger">
+                                                                            <i class="fas fa-trash me-1"></i> Supprimer
+                                                                        </button>
+                                                                    </form>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <div class="empty-state">
+                                    <i class="fas fa-inbox fa-4x mb-3"></i>
+                                    <h4>Aucune réclamation en attente</h4>
+                                    <p class="text-muted">
+                                        {% if user.is_authenticated %}
+                                        Vous n'avez soumis aucune réclamation pour le moment.
+                                        {% else %}
+                                        Connectez-vous pour voir vos réclamations.
+                                        {% endif %}
+                                    </p>
+                                    {% if user.is_authenticated %}
+                                    <a href="{% url 'create_claim' %}" class="btn btn-primary">
+                                        <i class="fas fa-plus me-1"></i> Créer une réclamation
+                                    </a>
+                                    {% else %}
+                                    <a href="{% url 'core:login_citoyen' %}" class="btn btn-primary">
+                                        <i class="fas fa-sign-in-alt me-1"></i> Se connecter
+                                    </a>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Accepted Claims -->
+                            <div class="tab-pane fade" id="accepted" role="tabpanel">
+                                {% if accepted_claims %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Titre</th>
+                                                <th>Type</th>
+                                                <th>Date Soumission</th>
+                                                <th>Date Traitement</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for claim in accepted_claims %}
+                                            <tr>
+                                                <td>{{ claim.id }}</td>
+                                                <td>{{ claim.title }}</td>
+                                                <td>{{ claim.claim_type.name|default:"-" }}</td>
+                                                <td>{{ claim.created_at|date:"d/m/Y H:i" }}</td>
+                                                <td>{{ claim.updated_at|date:"d/m/Y H:i" }}</td>
+                                                <td>
+                                                    <a href="{% url 'core:citizen_claim_detail' claim.id %}" class="btn btn-sm btn-info" title="Détails">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <div class="empty-state">
+                                    <i class="fas fa-check-circle fa-4x mb-3"></i>
+                                    <h4>Aucune réclamation acceptée</h4>
+                                    <p class="text-muted">
+                                        {% if user.is_authenticated %}
+                                        Vos réclamations acceptées apparaîtront ici.
+                                        {% else %}
+                                        Connectez-vous pour voir vos réclamations.
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Rejected Claims -->
+                            <div class="tab-pane fade" id="rejected" role="tabpanel">
+                                {% if rejected_claims %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Titre</th>
+                                                <th>Type</th>
+                                                <th>Date Soumission</th>
+                                                <th>Date Rejet</th>
+                                                <th>Motif</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for claim in rejected_claims %}
+                                            <tr>
+                                                <td>{{ claim.id }}</td>
+                                                <td>{{ claim.title }}</td>
+                                                <td>{{ claim.claim_type.name|default:"-" }}</td>
+                                                <td>{{ claim.created_at|date:"d/m/Y H:i" }}</td>
+                                                <td>{{ claim.updated_at|date:"d/m/Y H:i" }}</td>
+                                                <td>{{ claim.rejection_reason|default:"Aucun motif fourni" }}</td>
+                                                <td>
+                                                    <a href="{% url 'core:citizen_claim_detail' claim.id %}" class="btn btn-sm btn-info" title="Détails">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a href="{% url 'core:create_claim' %}?duplicate={{ claim.id }}" class="btn btn-sm btn-warning" title="Recréer">
+                                                        <i class="fas fa-copy"></i>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <div class="empty-state">
+                                    <i class="fas fa-times-circle fa-4x mb-3"></i>
+                                    <h4>Aucune réclamation rejetée</h4>
+                                    <p class="text-muted">
+                                        {% if user.is_authenticated %}
+                                        Vos réclamations rejetées apparaîtront ici.
+                                        {% else %}
+                                        Connectez-vous pour voir vos réclamations.
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Map -->
+                            <div class="tab-pane fade" id="map" role="tabpanel">
+                                <div id="claimsMap"></div>
+                                {% if not pending_claims and not accepted_claims and not rejected_claims %}
+                                <div class="empty-state">
+                                    <i class="fas fa-map-marked-alt fa-4x mb-3"></i>
+                                    <h4>Aucune réclamation à afficher sur la carte</h4>
+                                    <p class="text-muted">
+                                        {% if user.is_authenticated %}
+                                        Vos réclamations apparaîtront ici après création.
+                                        {% else %}
+                                        Connectez-vous pour voir vos réclamations.
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Floating Action Button -->
+    {% if user.is_authenticated %}
+    <a href="{% url 'create_claim' %}" class="btn btn-primary btn-floating">
+        <i class="fas fa-plus"></i>
+    </a>
+    {% endif %}
+
+    <!-- JavaScript -->
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Vérifier si l'élément map existe avant de l'initialiser
+        const mapElement = document.getElementById('claimsMap');
+        if (!mapElement) return;
+
+        // Initialiser la carte seulement quand l'onglet est actif
+        document.getElementById('map-tab').addEventListener('shown.bs.tab', function() {
+            initMap();
+        });
+        
+        // Si l'URL contient #map, initialiser la carte immédiatement
+        if (window.location.hash === '#map') {
+            initMap();
+        }
+    });
+
+    function initMap() {
+        const mapElement = document.getElementById('claimsMap');
+        if (!mapElement) return;
+
+        // Vider le conteneur au cas où
+        mapElement.innerHTML = '';
+        
+        const map = L.map('claimsMap').setView([36.7525, 3.042], 12);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        // Créer les groupes de marqueurs
+        const pendingLayer = L.layerGroup();
+        const acceptedLayer = L.layerGroup();
+        const rejectedLayer = L.layerGroup();
+
+        // Variables pour suivre si nous avons des marqueurs
+        let hasMarkers = false;
+
+        // Ajouter les marqueurs depuis le template Django
+        {% for claim in pending_claims %}
+            {% if claim.location_lat and claim.location_lng %}
+                hasMarkers = true;
+                const markerPending = L.marker([{{ claim.location_lat }}, {{ claim.location_lng }}], {
+                    icon: L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-gold.png',
+                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        shadowSize: [41, 41]
+                    })
+                }).bindPopup(`
+                    <b>{{ claim.title }}</b><br>
+                    <small>Type: {{ claim.claim_type.name|default:"-" }}</small><br>
+                    <small>Statut: En attente</small><br>
+                    <a href="{% url 'core:citizen_claim_detail' claim.id %}" class="btn btn-sm btn-primary mt-2">
+                        <i class="fas fa-eye me-1"></i> Détails
+                    </a>
+                `);
+                pendingLayer.addLayer(markerPending);
+            {% endif %}
+        {% endfor %}
+
+        {% for claim in accepted_claims %}
+            {% if claim.location_lat and claim.location_lng %}
+                hasMarkers = true;
+                const markerAccepted = L.marker([{{ claim.location_lat }}, {{ claim.location_lng }}], {
+                    icon: L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        shadowSize: [41, 41]
+                    })
+                }).bindPopup(`
+                    <b>{{ claim.title }}</b><br>
+                    <small>Type: {{ claim.claim_type.name|default:"-" }}</small><br>
+                    <small>Statut: Acceptée</small><br>
+                    <a href="{% url 'core:citizen_claim_detail' claim.id %}" class="btn btn-sm btn-primary mt-2">
+                        <i class="fas fa-eye me-1"></i> Détails
+                    </a>
+                `);
+                acceptedLayer.addLayer(markerAccepted);
+            {% endif %}
+        {% endfor %}
+
+        {% for claim in rejected_claims %}
+            {% if claim.location_lat and claim.location_lng %}
+                hasMarkers = true;
+                const markerRejected = L.marker([{{ claim.location_lat }}, {{ claim.location_lng }}], {
+                    icon: L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        shadowSize: [41, 41]
+                    })
+                }).bindPopup(`
+                    <b>{{ claim.title }}</b><br>
+                    <small>Type: {{ claim.claim_type.name|default:"-" }}</small><br>
+                    <small>Statut: Rejetée</small><br>
+                    <small>Motif: {{ claim.rejection_reason|default:"-" }}</small><br>
+                    <a href="{% url 'core:citizen_claim_detail' claim.id %}" class="btn btn-sm btn-primary mt-2">
+                        <i class="fas fa-eye me-1"></i> Détails
+                    </a>
+                `);
+                rejectedLayer.addLayer(markerRejected);
+            {% endif %}
+        {% endfor %}
+
+        // Si nous avons des marqueurs, les ajouter à la carte
+        if (hasMarkers) {
+            pendingLayer.addTo(map);
+            acceptedLayer.addTo(map);
+            rejectedLayer.addTo(map);
+
+            // Ajouter le contrôle des couches
+            const baseLayers = {};
+            const overlays = {
+                "En attente": pendingLayer,
+                "Acceptées": acceptedLayer,
+                "Rejetées": rejectedLayer
+            };
+            
+            L.control.layers(baseLayers, overlays, {collapsed: false}).addTo(map);
+
+            // Ajuster la vue pour montrer tous les marqueurs
+            const allLayers = L.featureGroup([pendingLayer, acceptedLayer, rejectedLayer]);
+            map.fitBounds(allLayers.getBounds().pad(0.2));
+        } else {
+            // Afficher un message si aucune localisation n'est disponible
+            mapElement.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-map-marked-alt fa-4x mb-3"></i>
+                    <h4>Aucune localisation disponible</h4>
+                    <p class="text-muted">Vos réclamations n'ont pas de coordonnées géographiques associées.</p>
+                </div>
+            `;
+        }
+    }
+</script>
+</body>
+</html>
