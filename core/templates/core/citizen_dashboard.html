@@ -243,11 +243,6 @@
                                     <i class="fas fa-times-circle me-1"></i> Rejetées
                                 </button>
                             </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="map-tab" data-bs-toggle="tab" data-bs-target="#map" type="button" role="tab">
-                                    <i class="fas fa-map-marked-alt me-1"></i> Carte
-                                </button>
-                            </li>
                         </ul>
                     </div>
                     <div class="card-body">
@@ -368,7 +363,7 @@
                                                 <td>{{ claim.updated_at|date:"d/m/Y H:i" }}</td>
                                                 <td><span class="badge bg-success status-badge">Acceptée</span></td>
                                                 <td>
-                                                    <a href="{% url 'core:citizen_claim_detail' claim.id %}" class="btn btn-sm btn-info" title="Détails">
+                                                    <a href="{% url 'citizen_claim_detail' claim.id %}" class="btn btn-sm btn-info" title="Détails">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
                                                 </td>
@@ -420,10 +415,10 @@
                                                 <td><span class="badge bg-danger status-badge">Rejetée</span></td>
                                                 <td>{{ claim.rejection_reason|default:"Aucun motif fourni" }}</td>
                                                 <td>
-                                                    <a href="{% url 'core:citizen_claim_detail' claim.id %}" class="btn btn-sm btn-info" title="Détails">
+                                                    <a href="{% url 'citizen_claim_detail' claim.id %}" class="btn btn-sm btn-info" title="Détails">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
-                                                    <a href="{% url 'core:create_claim' %}?duplicate={{ claim.id }}" class="btn btn-sm btn-warning" title="Recréer">
+                                                    <a href="{% url 'create_claim' %}?duplicate={{ claim.id }}" class="btn btn-sm btn-warning" title="Recréer">
                                                         <i class="fas fa-copy"></i>
                                                     </a>
                                                 </td>
@@ -439,24 +434,6 @@
                                     <p class="text-muted">
                                         {% if user.is_authenticated %}
                                         Vos réclamations rejetées apparaîtront ici.
-                                        {% else %}
-                                        Connectez-vous pour voir vos réclamations.
-                                        {% endif %}
-                                    </p>
-                                </div>
-                                {% endif %}
-                            </div>
-
-                            <!-- Map -->
-                            <div class="tab-pane fade" id="map" role="tabpanel">
-                                <div id="claimsMap"></div>
-                                {% if not pending_claims and not accepted_claims and not rejected_claims %}
-                                <div class="empty-state">
-                                    <i class="fas fa-map-marked-alt fa-4x mb-3"></i>
-                                    <h4>Aucune réclamation à afficher sur la carte</h4>
-                                    <p class="text-muted">
-                                        {% if user.is_authenticated %}
-                                        Vos réclamations apparaîtront ici après création.
                                         {% else %}
                                         Connectez-vous pour voir vos réclamations.
                                         {% endif %}
@@ -481,153 +458,5 @@
     <!-- JavaScript -->
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-    // Variables globales pour la carte
-    let map, pendingLayer, acceptedLayer, rejectedLayer;
-
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialiser la carte seulement quand l'onglet est actif
-        document.getElementById('map-tab').addEventListener('shown.bs.tab', function() {
-            initMap();
-        });
-        
-        // Si l'URL contient #map, initialiser la carte immédiatement
-        if (window.location.hash === '#map') {
-            initMap();
-        }
-    });
-
-    function initMap() {
-        const mapElement = document.getElementById('claimsMap');
-        if (!mapElement) return;
-
-        // Si la carte existe déjà, juste la rafraîchir
-        if (map) {
-            map.invalidateSize();
-            return;
-        }
-
-        // Initialiser la carte
-        map = L.map('claimsMap').setView([36.7525, 3.042], 12);
-        
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        }).addTo(map);
-
-        // Créer les groupes de marqueurs
-        pendingLayer = L.layerGroup();
-        acceptedLayer = L.layerGroup();
-        rejectedLayer = L.layerGroup();
-
-        // Variables pour suivre si nous avons des marqueurs
-        let hasMarkers = false;
-
-        // Ajouter les marqueurs depuis le template Django
-        {% for claim in pending_claims %}
-            {% if claim.location_lat and claim.location_lng %}
-                hasMarkers = true;
-                const markerPending = L.marker([{{ claim.location_lat }}, {{ claim.location_lng }}], {
-                    icon: L.icon({
-                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-gold.png',
-                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-                        iconSize: [25, 41],
-                        iconAnchor: [12, 41],
-                        popupAnchor: [1, -34],
-                        shadowSize: [41, 41]
-                    })
-                }).bindPopup(`
-                    <b>{{ claim.title }}</b><br>
-                    <small>Type: {{ claim.claim_type.name|default:"-" }}</small><br>
-                    <small>Statut: En attente</small><br>
-                    <a href="{% url 'citizen_claim_detail' claim.id %}" class="btn btn-sm btn-primary mt-2">
-                        <i class="fas fa-eye me-1"></i> Détails
-                    </a>
-                `);
-                pendingLayer.addLayer(markerPending);
-            {% endif %}
-        {% endfor %}
-
-        {% for claim in accepted_claims %}
-            {% if claim.location_lat and claim.location_lng %}
-                hasMarkers = true;
-                const markerAccepted = L.marker([{{ claim.location_lat }}, {{ claim.location_lng }}], {
-                    icon: L.icon({
-                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
-                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-                        iconSize: [25, 41],
-                        iconAnchor: [12, 41],
-                        popupAnchor: [1, -34],
-                        shadowSize: [41, 41]
-                    })
-                }).bindPopup(`
-                    <b>{{ claim.title }}</b><br>
-                    <small>Type: {{ claim.claim_type.name|default:"-" }}</small><br>
-                    <small>Statut: Acceptée</small><br>
-                    <a href="{% url 'core:citizen_claim_detail' claim.id %}" class="btn btn-sm btn-primary mt-2">
-                        <i class="fas fa-eye me-1"></i> Détails
-                    </a>
-                `);
-                acceptedLayer.addLayer(markerAccepted);
-            {% endif %}
-        {% endfor %}
-
-        {% for claim in rejected_claims %}
-            {% if claim.location_lat and claim.location_lng %}
-                hasMarkers = true;
-                const markerRejected = L.marker([{{ claim.location_lat }}, {{ claim.location_lng }}], {
-                    icon: L.icon({
-                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-                        iconSize: [25, 41],
-                        iconAnchor: [12, 41],
-                        popupAnchor: [1, -34],
-                        shadowSize: [41, 41]
-                    })
-                }).bindPopup(`
-                    <b>{{ claim.title }}</b><br>
-                    <small>Type: {{ claim.claim_type.name|default:"-" }}</small><br>
-                    <small>Statut: Rejetée</small><br>
-                    <small>Motif: {{ claim.rejection_reason|default:"-" }}</small><br>
-                    <a href="{% url 'core:citizen_claim_detail' claim.id %}" class="btn btn-sm btn-primary mt-2">
-                        <i class="fas fa-eye me-1"></i> Détails
-                    </a>
-                `);
-                rejectedLayer.addLayer(markerRejected);
-            {% endif %}
-        {% endfor %}
-
-        // Si nous avons des marqueurs, les ajouter à la carte
-        if (hasMarkers) {
-            pendingLayer.addTo(map);
-            acceptedLayer.addTo(map);
-            rejectedLayer.addTo(map);
-
-            // Ajouter le contrôle des couches
-            const baseLayers = {};
-            const overlays = {
-                "En attente": pendingLayer,
-                "Acceptées": acceptedLayer,
-                "Rejetées": rejectedLayer
-            };
-            
-            L.control.layers(baseLayers, overlays, {collapsed: false}).addTo(map);
-
-            // Ajuster la vue pour montrer tous les marqueurs
-            const allLayers = L.featureGroup([pendingLayer, acceptedLayer, rejectedLayer]);
-            map.fitBounds(allLayers.getBounds().pad(0.2));
-        } else {
-            // Afficher un message si aucune localisation n'est disponible
-            mapElement.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-map-marked-alt fa-4x mb-3"></i>
-                    <h4>Aucune localisation disponible</h4>
-                    <p class="text-muted">Vos réclamations n'ont pas de coordonnées géographiques associées.</p>
-                </div>
-            `;
-        }
-    }
-    </script>
 </body>
 </html>

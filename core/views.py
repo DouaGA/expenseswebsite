@@ -91,6 +91,7 @@ def signup_agent(request):
 @login_required
 def agent_dashboard(request):
     claims = Claim.objects.all()
+    
     context = {
         'total_claims': claims.count(),
         'pending_claims': claims.filter(status=Claim.PENDING),
@@ -103,6 +104,14 @@ class LogoutView(View):
     def get(self, request):
         logout(request)
         return redirect('home')
+
+@login_required
+def citizen_claim_detail(request, pk):
+    claim = get_object_or_404(Claim, pk=pk)
+    if claim.created_by != request.user:
+        raise PermissionDenied 
+    return render(request, 'core/citizen_claim_detail.html', {'claim': claim})
+# views.py (partie modifiée)
 
 @login_required
 def claims_list(request):
@@ -119,11 +128,51 @@ def claims_list(request):
     if status_filter != 'all':
         claims = claims.filter(status=status_filter)
     
+    # Calcul du temps moyen de traitement
+    processed = Claim.objects.exclude(status='pending')
+    avg_seconds = processed.aggregate(
+        avg_time=Avg(F('updated_at') - F('created_at'))
+    )['avg_time'] or timedelta(0)
+    avg_processing_time = round(avg_seconds.total_seconds() / 3600, 1)
+    
+    # Récupérer la réclamation sélectionnée ou la plus récente
+    selected_claim_id = request.GET.get('claim_id')
+    selected_claim = None
+    if selected_claim_id:
+        selected_claim = get_object_or_404(Claim, id=selected_claim_id)
+    elif claims.exists():
+        selected_claim = claims.first()
+    
     municipalities = Municipality.objects.all()
     
     return render(request, 'core/claims_list.html', {
         'claims': claims,
+        'selected_claim': selected_claim,
         'status_filter': status_filter,
+        'municipalities': municipalities,
+        'avg_processing_time': avg_processing_time
+    })
+
+@login_required
+def claims_map(request):
+    claims = Claim.objects.exclude(location_lat__isnull=True).exclude(location_lng__isnull=True)
+    
+    status_filter = request.GET.get('status', 'all')
+    if status_filter != 'all':
+        claims = claims.filter(status=status_filter)
+    
+    type_filter = request.GET.get('type', 'all')
+    if type_filter != 'all':
+        claims = claims.filter(claim_type__name=type_filter)
+    
+    date_filter = request.GET.get('date')
+    if date_filter:
+        claims = claims.filter(created_at__date=date_filter)
+    
+    municipalities = Municipality.objects.all()
+    
+    return render(request, 'core/claims_map.html', {
+        'claims': claims,
         'municipalities': municipalities
     })
 
@@ -131,11 +180,9 @@ def claims_list(request):
 def agent_claim_detail(request, pk):
     claim = get_object_or_404(Claim, pk=pk)
     
-    # Vérification plus stricte du rôle agent
     if not hasattr(request.user, 'agent'):
         raise PermissionDenied("Accès réservé aux agents municipaux")
     
-    # Gestion du changement de statut
     if request.method == 'POST' and 'status' in request.POST:
         new_status = request.POST['status']
         if new_status in [Claim.PENDING, Claim.ACCEPTED, Claim.REJECTED]:
@@ -147,24 +194,7 @@ def agent_claim_detail(request, pk):
     
     return render(request, 'core/agent_claim_detail.html', {
         'claim': claim,
-        'now': timezone.now()  # Utile pour les calculs de durée
-    })
-
-@login_required
-def citizen_claim_detail(request, pk):
-    claim = get_object_or_404(Claim, pk=pk)
-    if claim.created_by != request.user:
-        raise PermissionDenied 
-    return render(request, 'core/citizen_claim_detail.html', {'claim': claim})
-
-@login_required
-def claims_map(request):
-    claims = Claim.objects.all()
-    municipalities = Municipality.objects.all()
-    
-    return render(request, 'core/claims_map.html', {
-        'claims': claims,
-        'municipalities': municipalities
+        'now': timezone.now()
     })
 
 @login_required
@@ -257,7 +287,6 @@ def citizen_dashboard(request):
     return render(request, 'core/citizen_dashboard.html', context)
 
 
-
 @login_required
 def profile_view(request):
     profile, created = Profile.objects.get_or_create(user=request.user)
@@ -305,14 +334,18 @@ def edit_profile(request):
         'municipalities': municipalities
     })
 
+# views.py (partie modifiée)
+
 @login_required
 def stats_view(request):
+    # Statistiques générales
     total_claims = Claim.objects.count()
-    processed_claims = Claim.objects.exclude(status='pending').count()
+    processed_claims = Claim.objects.exclude(status=Claim.PENDING).count()
     processing_rate = round((processed_claims / total_claims * 100)) if total_claims > 0 else 0
-    rejection_rate = round((Claim.objects.filter(status='rejected').count() / total_claims * 100)) if total_claims > 0 else 0
+    rejection_rate = round((Claim.objects.filter(status=Claim.REJECTED).count() / total_claims * 100)) if total_claims > 0 else 0
     
-    processed = Claim.objects.exclude(status='pending')
+    # Temps moyen de traitement
+    processed = Claim.objects.exclude(status=Claim.PENDING)
     avg_seconds = processed.aggregate(
         avg_time=Avg(F('updated_at') - F('created_at'))
     )['avg_time'] or timedelta(0)
@@ -320,6 +353,7 @@ def stats_view(request):
     
     claims_per_day = round(total_claims / 30, 1)
     
+    # Statistiques sur 30 jours
     last_30_days = timezone.now() - timedelta(days=30)
     daily_stats = (
         Claim.objects
@@ -327,9 +361,9 @@ def stats_view(request):
         .annotate(date=TruncDate('created_at'))
         .values('date')
         .annotate(
-            pending=Count('id', filter=Q(status='pending')),
-            accepted=Count('id', filter=Q(status='accepted')),
-            rejected=Count('id', filter=Q(status='rejected')))
+            pending=Count('id', filter=Q(status=Claim.PENDING)),
+            accepted=Count('id', filter=Q(status=Claim.ACCEPTED)),
+            rejected=Count('id', filter=Q(status=Claim.REJECTED)))
         .order_by('date')
     )
     
@@ -338,6 +372,7 @@ def stats_view(request):
     accepted_counts = [day['accepted'] for day in daily_stats]
     rejected_counts = [day['rejected'] for day in daily_stats]
     
+    # Statistiques par municipalité
     mun_stats = (
         Municipality.objects
         .annotate(count=Count('claim'))
@@ -346,11 +381,15 @@ def stats_view(request):
     municipalities = [mun.name for mun in mun_stats]
     municipality_counts = [mun.count for mun in mun_stats]
     
+    # Réclamations récentes pour le tableau
     recent_claims = (
         Claim.objects
-        .exclude(status='pending')
+        .exclude(status=Claim.PENDING)
         .order_by('-updated_at')[:20]
     )
+    
+    # Nouvelle réclamation à traiter (la plus ancienne en attente)
+    new_reclamation = Claim.objects.filter(status=Claim.PENDING).order_by('created_at').first()
     
     return render(request, 'core/stats.html', {
         'processing_rate': processing_rate,
@@ -364,6 +403,7 @@ def stats_view(request):
         'municipalities': json.dumps(municipalities),
         'municipality_counts': json.dumps(municipality_counts),
         'recent_claims': recent_claims,
+        'new_reclamation': new_reclamation,  # Ajout de la nouvelle réclamation à traiter
     })
 
 @login_required
@@ -423,3 +463,48 @@ def check_user_type(request):
         'user_type': request.user.user_type,
         'is_authenticated': request.user.is_authenticated
     })
+
+
+
+
+from django.http import JsonResponse
+from .models import Claim, Municipality
+from django.core.serializers import serialize
+
+def api_claims(request):
+    claims = Claim.objects.exclude(location_lat__isnull=True).exclude(location_lng__isnull=True)
+    
+    # Filtrer selon les paramètres
+    claim_type = request.GET.get('type')
+    if claim_type:
+        claims = claims.filter(claim_type__name=claim_type)
+    
+    status = request.GET.get('status')
+    if status:
+        claims = claims.filter(status=status)
+    
+    municipality_id = request.GET.get('municipality')
+    if municipality_id:
+        claims = claims.filter(municipality_id=municipality_id)
+    
+    # Sérialisation des données
+    claims_data = []
+    for claim in claims:
+        claim_data = {
+            'id': claim.id,
+            'title': claim.title,
+            'description': claim.description,
+            'claim_type': claim.claim_type.name if claim.claim_type else None,
+            'status': claim.status,
+            'location_lat': claim.location_lat,
+            'location_lng': claim.location_lng,
+            'created_at': claim.created_at.isoformat(),
+            'municipality': claim.municipality.name if claim.municipality else None,
+            'created_by': {
+                'first_name': claim.created_by.first_name if claim.created_by else None,
+                'last_name': claim.created_by.last_name if claim.created_by else None,
+            } if claim.created_by else None
+        }
+        claims_data.append(claim_data)
+    
+    return JsonResponse(claims_data, safe=False)

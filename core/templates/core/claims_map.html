@@ -1,5 +1,4 @@
-
-{% block title %}Carte Interactive des Réclamations{% endblock %}
+{% block title %}Carte des Réclamations avec Liste{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
@@ -16,20 +15,39 @@
         --danger-color: #f72585;
     }
     
-    #map {
-        height: 70vh;
+    #map-container {
+        height: calc(100vh - 120px);
         width: 100%;
-        border-radius: 12px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        transition: all 0.3s ease;
+        position: relative;
+        display: flex;
     }
     
-    #map:hover {
-        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    #map {
+        height: 100%;
+        flex: 1;
     }
     
-    .marker-icon {
+    .sidebar {
+        width: 350px;
+        background: white;
+        border-right: 1px solid #ddd;
+        overflow-y: auto;
+        padding: 15px;
+    }
+    
+    .filter-panel {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        width: 300px;
+    }
+    
+    .claim-marker {
         background-color: var(--primary-color);
         border-radius: 50%;
         border: 3px solid white;
@@ -41,13 +59,6 @@
         color: white;
         font-weight: bold;
         font-size: 12px;
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
-    
-    .marker-icon:hover {
-        transform: scale(1.1);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
     }
     
     .pending {
@@ -62,97 +73,30 @@
         background-color: var(--danger-color);
     }
     
-    .info-window {
-        min-width: 280px;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    .leaflet-popup-content {
+        min-width: 250px;
     }
     
-    .info-window h5 {
-        color: var(--dark-color);
-        border-bottom: 2px solid var(--primary-color);
-        padding-bottom: 8px;
-        margin-bottom: 12px;
+    .leaflet-popup-content h3 {
+        margin-top: 0;
+        color: var(--primary-color);
+        font-size: 1.1rem;
     }
     
-    .info-window img {
-        border-radius: 6px;
-        margin-top: 10px;
-        transition: transform 0.3s ease;
+    .claim-info {
+        margin-bottom: 8px;
     }
     
-    .info-window img:hover {
-        transform: scale(1.03);
-    }
-    
-    .filter-container {
-        background: white;
-        padding: 20px;
-        border-radius: 12px;
-        margin-bottom: 25px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        transition: all 0.3s ease;
-    }
-    
-    .filter-container:hover {
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
-    
-    .waste-icon {
-        width: 20px;
-        height: 20px;
-        margin-right: 8px;
+    .claim-info strong {
         display: inline-block;
-        vertical-align: middle;
-    }
-    
-    .search-btn {
-        height: 42px;
-        margin-top: 32px;
-        transition: all 0.3s ease;
-        font-weight: 500;
-        letter-spacing: 0.5px;
-    }
-    
-    .search-btn:hover {
-        transform: translateY(-2px);
-    }
-    
-    .legend {
-        padding: 12px;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 0 20px rgba(0,0,0,0.15);
-        line-height: 1.6;
-        font-size: 14px;
-    }
-    
-    .legend i {
-        width: 18px;
-        height: 18px;
-        float: left;
-        margin-right: 8px;
-        border-radius: 3px;
-    }
-    
-    .leaflet-popup-content-wrapper {
-        border-radius: 8px !important;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2) !important;
-        transition: all 0.3s ease;
-    }
-    
-    .leaflet-popup-content-wrapper:hover {
-        box-shadow: 0 8px 25px rgba(0,0,0,0.25) !important;
-    }
-    
-    .leaflet-popup-tip {
-        box-shadow: none !important;
+        width: 100px;
     }
     
     .status-badge {
-        padding: 4px 8px;
+        padding: 3px 8px;
         border-radius: 12px;
         font-size: 12px;
-        font-weight: 600;
+        font-weight: bold;
         text-transform: uppercase;
     }
     
@@ -171,102 +115,145 @@
         color: white;
     }
     
-    .action-buttons {
+    .claim-item {
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        border-left: 4px solid var(--primary-color);
+        background: #f8f9fa;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .claim-item:hover {
+        background: #e9ecef;
+        transform: translateX(2px);
+    }
+    
+    .claim-item.active {
+        border-left-color: var(--accent-color);
+        background: #e7f1ff;
+    }
+    
+    .claim-item .title {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .claim-item .meta {
         display: flex;
-        gap: 8px;
-        margin-top: 12px;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #6c757d;
     }
     
-    .action-buttons .btn {
-        flex: 1;
-        font-size: 13px;
-        padding: 6px 12px;
-        transition: all 0.3s ease;
+    .claim-item .status {
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 10px;
     }
     
-    .action-buttons .btn:hover {
-        transform: translateY(-2px);
+    .sidebar-header {
+        padding: 10px 15px;
+        border-bottom: 1px solid #ddd;
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     
-    @media (max-width: 768px) {
-        #map {
-            height: 60vh;
-        }
-        
-        .search-btn {
-            margin-top: 15px;
-            width: 100%;
-        }
+    .sidebar-header h3 {
+        margin: 0;
+        font-size: 1.2rem;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-        <h1 class="h2"><i class="fas fa-map-marked-alt mr-2"></i>Carte Interactive des Signalements</h1>
+<div class="container-fluid px-0">
+    <div class="d-flex justify-content-between align-items-center py-3 px-4 border-bottom">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-map-marked-alt me-2"></i>Carte des Réclamations
+        </h1>
     </div>
 
-    <div class="filter-container">
-        <div class="row">
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label for="status-filter" class="font-weight-bold">Statut</label>
-                    <select id="status-filter" class="form-control">
-                        <option value="all">Tous statuts</option>
-                        <option value="pending">En attente</option>
-                        <option value="accepted">Acceptées</option>
-                        <option value="rejected">Rejetées</option>
-                    </select>
-                </div>
+    <div id="map-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3><i class="fas fa-list me-2"></i>Liste des Réclamations</h3>
+                <span class="badge bg-primary">{{ claims|length }}</span>
             </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label for="type-filter" class="font-weight-bold">Type :</label>
-                    <select id="type-filter" class="form-control">
-                        <option value="all">Tous types</option>
-                        <optgroup label="Déchets">
-                            <option value="plastic">Plastique</option>
-                            <option value="glass">Verre</option>
-                            <option value="paper">Papier/Carton</option>
-                            <option value="metal">Métal</option>
-                            <option value="organic">Organique</option>
-                            <option value="electronic">Électronique</option>
-                            <option value="hazardous">Dangereux</option>
-                            <option value="construction">BTP</option>
-                        </optgroup>
-                        <optgroup label="Autres">
-                            <option value="hole">Puits/Trou</option>
-                            <option value="illegal_dumping">Dépôt sauvage</option>
-                            <option value="water">Problème eau</option>
-                            <option value="other">Autre</option>
-                        </optgroup>
-                    </select>
+            
+            <div id="claims-list">
+                {% for claim in claims %}
+                <div class="claim-item" data-claim-id="{{ claim.id }}" data-lat="{{ claim.location_lat }}" data-lng="{{ claim.location_lng }}">
+                    <div class="title">{{ claim.title|truncatechars:40 }}</div>
+                    <div class="meta">
+                        <span>{{ claim.municipality.name|default:"N/A" }}</span>
+                        <span class="status badge-{{ claim.status }}">
+                            {{ claim.get_status_display }}
+                        </span>
+                    </div>
+                    <div class="meta">
+                        <span>{{ claim.created_at|date:"d/m/Y" }}</span>
+                        <span>{{ claim.claim_type.name|default:"N/A" }}</span>
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label for="date-filter" class="font-weight-bold">Date</label>
-                    <input type="date" id="date-filter" class="form-control">
+                {% empty %}
+                <div class="text-center py-4 text-muted">
+                    Aucune réclamation trouvée
                 </div>
-            </div>
-            <div class="col-md-3">
-                <button id="search-btn" class="btn btn-primary search-btn">
-                    <i class="fas fa-search mr-2"></i> Rechercher
-                </button>
-                <button id="reset-btn" class="btn btn-outline-secondary search-btn ml-2">
-                    <i class="fas fa-undo mr-2"></i> Réinitialiser
-                </button>
+                {% endfor %}
             </div>
         </div>
+        
+        <div id="map"></div>
+        
+        <div class="filter-panel">
+            <h5 class="mb-3"><i class="fas fa-filter me-2"></i>Filtres</h5>
+            
+            <div class="mb-3">
+                <label class="form-label">Type de réclamation</label>
+                <select class="form-select" id="type-filter">
+                    <option value="all">Tous types</option>
+                    <option value="Trottoir dégradé ou impraticable">Trottoir dégradé</option>
+                    <option value="Espaces verts non entretenus">Espaces verts</option>
+                    <option value="Éclairage insuffisant dans une zone">Éclairage</option>
+                    <option value="Dégradation d'un bâtiment public">Bâtiment public</option>
+                    <option value="Clôture ou mur endommagé">Clôture/Mur</option>
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Statut</label>
+                <select class="form-select" id="status-filter">
+                    <option value="all">Tous statuts</option>
+                    <option value="pending">En attente</option>
+                    <option value="accepted">Accepté</option>
+                    <option value="rejected">Rejeté</option>
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Municipalité</label>
+                <select class="form-select" id="municipality-filter">
+                    <option value="all">Toutes municipalités</option>
+                    {% for municipality in municipalities %}
+                    <option value="{{ municipality.id }}">{{ municipality.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <button id="apply-filters" class="btn btn-primary w-100">
+                <i class="fas fa-sync-alt me-2"></i>Appliquer
+            </button>
+        </div>
     </div>
-
-    <div id="map"></div>
 </div>
 {% endblock %}
+
 {% block extra_js %}
 <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Initialisation de la carte
@@ -277,240 +264,202 @@ document.addEventListener('DOMContentLoaded', function() {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     }).addTo(map);
 
-    // Dictionnaire des marqueurs
-    let markers = {};
-    
-    // Icônes personnalisées
+    // Variables globales
+    let markers = [];
+    let allClaims = [];
+    let activeClaimId = null;
+
+    // Création d'un marqueur personnalisé
     function createCustomIcon(claim) {
         const statusClass = claim.status === 'pending' ? 'pending' : 
                           claim.status === 'accepted' ? 'accepted' : 'rejected';
         
         const typeColors = {
-            'plastic': '#0095B6',
-            'glass': '#00B34D',
-            'paper': '#FFD700',
-            'metal': '#A9A9A9',
-            'organic': '#8B4513',
-            'electronic': '#00008B',
-            'hazardous': '#FF0000',
-            'construction': '#696969',
-            'hole': '#8B0000',
-            'illegal_dumping': '#4B0082',
-            'water': '#1E90FF',
-            'other': '#800080'
+            'Trottoir dégradé ou impraticable': '#0095B6',
+            'Espaces verts non entretenus': '#00B34D',
+            'Éclairage insuffisant dans une zone': '#FFD700',
+            'Dégradation d\'un bâtiment public': '#A9A9A9',
+            'Clôture ou mur endommagé': '#8B4513'
         };
         
-        // Correction: Vérification plus robuste du type de réclamation
-        const claimType = (typeof claim.claim_type === 'string') ? claim.claim_type.toLowerCase() : 'other';
-        const color = typeColors[claimType] || '#3388ff';
-        
-        const iconHtml = `
-            <div class="marker-icon ${statusClass}" style="background-color: ${color}">
-                ${claimType.charAt(0).toUpperCase()}
-            </div>
-        `;
+        const color = typeColors[claim.claim_type] || '#3388ff';
         
         return L.divIcon({
-            html: iconHtml,
             className: 'custom-marker',
+            html: `<div class="claim-marker ${statusClass}" style="background-color: ${color}">
+                     ${claim.claim_type ? claim.claim_type.charAt(0) : 'R'}
+                   </div>`,
             iconSize: [32, 32],
             popupAnchor: [0, -15]
         });
     }
 
-    // Ajouter une légende
-    function addLegend() {
-        const legend = L.control({position: 'bottomright'});
-
-        legend.onAdd = function(map) {
-            const div = L.DomUtil.create('div', 'legend');
-            const types = {
-                'plastic': 'Plastique',
-                'glass': 'Verre',
-                'paper': 'Papier',
-                'metal': 'Métal',
-                'organic': 'Organique',
-                'electronic': 'Électronique',
-                'hazardous': 'Dangereux',
-                'construction': 'BTP',
-                'hole': 'Puits/Trou',
-                'illegal_dumping': 'Dépôt sauvage',
-                'water': 'Problème eau',
-                'other': 'Autre'
-            };
-            const colors = {
-                'plastic': '#0095B6',
-                'glass': '#00B34D',
-                'paper': '#FFD700',
-                'metal': '#A9A9A9',
-                'organic': '#8B4513',
-                'electronic': '#00008B',
-                'hazardous': '#FF0000',
-                'construction': '#696969',
-                'hole': '#8B0000',
-                'illegal_dumping': '#4B0082',
-                'water': '#1E90FF',
-                'other': '#800080'
-            };
-
-            let labels = ['<strong>Types de signalement</strong><br>'];
-            
-            for (const type in types) {
-                labels.push(
-                    `<i style="background:${colors[type]}"></i> ${types[type]}`
-                );
-            }
-            
-            labels.push('<br><strong>Statuts</strong><br>');
-            labels.push('<i style="background:#ffc107"></i> En attente');
-            labels.push('<i style="background:#28a745"></i> Accepté');
-            labels.push('<i style="background:#dc3545"></i> Rejeté');
-
-            div.innerHTML = labels.join('<br>');
-            return div;
-        };
-
-        legend.addTo(map);
-    }
-
-    // Charger les signalements avec filtres
+    // Charger les réclamations depuis l'API
     function loadClaims() {
-        const status = document.getElementById('status-filter').value;
-        const claimType = document.getElementById('type-filter').value;
-        const date = document.getElementById('date-filter').value;
+        const typeFilter = document.getElementById('type-filter').value;
+        const statusFilter = document.getElementById('status-filter').value;
+        const municipalityFilter = document.getElementById('municipality-filter').value;
         
         let url = '/api/claims/?';
-        if (status !== 'all') url += `status=${status}&`;
-        if (claimType !== 'all') url += `type=${claimType}&`;
-        if (date) url += `date=${date}`;
+        if (typeFilter !== 'all') url += `type=${encodeURIComponent(typeFilter)}&`;
+        if (statusFilter !== 'all') url += `status=${statusFilter}&`;
+        if (municipalityFilter !== 'all') url += `municipality=${municipalityFilter}`;
         
         // Supprimer les marqueurs existants
-        Object.values(markers).forEach(marker => {
-            map.removeLayer(marker);
-        });
-        markers = {};
+        markers.forEach(marker => map.removeLayer(marker));
+        markers = [];
         
-        // Afficher un loader pendant le chargement
-        const loader = L.marker(map.getCenter(), {
-            icon: L.divIcon({
-                html: '<div class="spinner-border text-primary"></div>',
-                className: 'loader-marker',
-                iconSize: [40, 40]
-            })
-        }).addTo(map);
-        
-        // Requête AJAX avec meilleure gestion des erreurs
         fetch(url)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            map.removeLayer(loader);
-            
-            if (!Array.isArray(data)) {
-                throw new Error('Données reçues invalides');
-            }
-
-            data.forEach(claim => {
-                if (!claim.location_lat || !claim.location_lng) {
-                    console.warn('Signalement sans coordonnées:', claim);
-                    return;
-                }
-
-                const marker = L.marker(
-                    [claim.location_lat, claim.location_lng],
-                    { 
-                        icon: createCustomIcon(claim),
-                        claim: claim
-                    }
-                ).addTo(map);
+            .then(response => {
+                if (!response.ok) throw new Error('Erreur de chargement');
+                return response.json();
+            })
+            .then(data => {
+                if (!Array.isArray(data)) throw new Error('Données invalides');
+                allClaims = data;
                 
-                const popupContent = `
-                    <div class="info-window">
-                        <h5>${claim.title || 'Signalement sans titre'}</h5>
-                        <p><strong>Type:</strong> ${claim.claim_type || 'Non spécifié'}</p>
-                        <p><strong>Statut:</strong> 
-                            <span class="status-badge badge-${claim.status}">${claim.status}</span>
-                        </p>
-                        <p><strong>Date:</strong> ${new Date(claim.created_at).toLocaleDateString()}</p>
-                        ${claim.description ? `<p><strong>Description:</strong> ${claim.description.substring(0, 100)}${claim.description.length > 100 ? '...' : ''}</p>` : ''}
-                        
-                        <div class="action-buttons">
-                            <a href="/claims/${claim.id}" class="btn btn-info">
-                                <i class="fas fa-eye mr-1"></i> Voir détails
+                // Mettre à jour la sidebar
+                updateSidebar(data);
+                
+                data.forEach(claim => {
+                    if (!claim.location_lat || !claim.location_lng) return;
+                    
+                    const marker = L.marker(
+                        [claim.location_lat, claim.location_lng],
+                        { icon: createCustomIcon(claim) }
+                    ).addTo(map);
+                    
+                    const popupContent = `
+                        <div class="leaflet-popup-content">
+                            <h3>${claim.title || 'Réclamation sans titre'}</h3>
+                            <div class="claim-info">
+                                <strong>Type:</strong> ${claim.claim_type || 'Non spécifié'}
+                            </div>
+                            <div class="claim-info">
+                                <strong>Statut:</strong> 
+                                <span class="status-badge badge-${claim.status}">${claim.status}</span>
+                            </div>
+                            <div class="claim-info">
+                                <strong>Municipalité:</strong> ${claim.municipality || 'Non spécifié'}
+                            </div>
+                            <div class="claim-info">
+                                <strong>Citoyen:</strong> 
+                                ${claim.created_by ? claim.created_by.first_name + ' ' + claim.created_by.last_name : 'Anonyme'}
+                            </div>
+                            <div class="claim-info">
+                                <strong>Date:</strong> ${new Date(claim.created_at).toLocaleDateString()}
+                            </div>
+                            ${claim.description ? `
+                            <div class="claim-info">
+                                <strong>Description:</strong> 
+                                ${claim.description.length > 100 ? 
+                                 claim.description.substring(0, 100) + '...' : 
+                                 claim.description}
+                            </div>` : ''}
+                            <a href="/claims/${claim.id}" class="btn btn-sm btn-primary w-100 mt-2">
+                                Voir détails
                             </a>
                         </div>
-                    </div>
-                `;
+                    `;
+                    
+                    marker.bindPopup(popupContent);
+                    markers.push(marker);
+                    
+                    // Gérer le clic sur le marqueur
+                    marker.on('click', function() {
+                        highlightClaimInSidebar(claim.id);
+                    });
+                });
                 
-                marker.bindPopup(popupContent);
-                markers[claim.id] = marker;
+                // Ajuster la vue si des marqueurs existent
+                if (markers.length > 0) {
+                    const group = new L.featureGroup(markers);
+                    map.fitBounds(group.getBounds());
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur de chargement des réclamations');
+            });
+    }
+
+    // Mettre à jour la sidebar avec les réclamations
+    function updateSidebar(claims) {
+        const claimsList = document.getElementById('claims-list');
+        claimsList.innerHTML = '';
+        
+        if (claims.length === 0) {
+            claimsList.innerHTML = `
+                <div class="text-center py-4 text-muted">
+                    Aucune réclamation trouvée
+                </div>
+            `;
+            return;
+        }
+        
+        claims.forEach(claim => {
+            const claimItem = document.createElement('div');
+            claimItem.className = `claim-item ${activeClaimId === claim.id ? 'active' : ''}`;
+            claimItem.dataset.claimId = claim.id;
+            claimItem.dataset.lat = claim.location_lat;
+            claimItem.dataset.lng = claim.location_lng;
+            
+            claimItem.innerHTML = `
+                <div class="title">${claim.title ? claim.title.substring(0, 40) + (claim.title.length > 40 ? '...' : '') : 'Sans titre'}</div>
+                <div class="meta">
+                    <span>${claim.municipality ? claim.municipality : 'N/A'}</span>
+                    <span class="status badge-${claim.status}">
+                        ${claim.status}
+                    </span>
+                </div>
+                <div class="meta">
+                    <span>${new Date(claim.created_at).toLocaleDateString()}</span>
+                    <span>${claim.claim_type ? claim.claim_type : 'N/A'}</span>
+                </div>
+            `;
+            
+            claimItem.addEventListener('click', function() {
+                highlightClaimInSidebar(claim.id);
+                centerMapOnClaim(claim);
+                openPopupForClaim(claim.id);
             });
             
-            // Ajuster la vue de la carte si des marqueurs existent
-            if (Object.keys(markers).length > 0) {
-                const markerGroup = new L.featureGroup(Object.values(markers));
-                map.fitBounds(markerGroup.getBounds());
-            } else {
-                showNoResultsMessage();
-            }
-        })
-        .catch(error => {
-            console.error('Erreur:', error);
-            map.removeLayer(loader);
-            showErrorMessage(error.message || 'Erreur de chargement des données');
+            claimsList.appendChild(claimItem);
         });
     }
 
-    function showNoResultsMessage() {
-        L.marker(map.getCenter(), {
-            icon: L.divIcon({
-                html: '<div class="alert alert-info">Aucun résultat trouvé</div>',
-                className: 'info-marker',
-                iconSize: [200, 50]
-            })
-        }).addTo(map).bindPopup(`
-            <div class="alert alert-info">
-                <p>Aucun signalement ne correspond à vos critères de recherche</p>
-            </div>
-        `).openPopup();
+    // Centrer la carte sur une réclamation
+    function centerMapOnClaim(claim) {
+        if (claim.location_lat && claim.location_lng) {
+            map.setView([claim.location_lat, claim.location_lng], 15);
+        }
     }
 
-    function showErrorMessage(message) {
-        L.marker(map.getCenter(), {
-            icon: L.divIcon({
-                html: '<div class="alert alert-danger">Erreur de chargement</div>',
-                className: 'error-marker',
-                iconSize: [200, 50]
-            })
-        }).addTo(map).bindPopup(`
-            <div class="alert alert-danger">
-                <p>${message}</p>
-                <button onclick="location.reload()" class="btn btn-sm btn-warning mt-2">
-                    <i class="fas fa-sync-alt mr-1"></i> Réessayer
-                </button>
-            </div>
-        `).openPopup();
+    // Ouvrir le popup pour une réclamation
+    function openPopupForClaim(claimId) {
+        const marker = markers.find(m => {
+            const popupContent = m.getPopup().getContent();
+            return popupContent.includes(`/claims/${claimId}`);
+        });
+        
+        if (marker) {
+            marker.openPopup();
+        }
     }
 
-    // Réinitialiser les filtres
-    function resetFilters() {
-        document.getElementById('status-filter').value = 'all';
-        document.getElementById('type-filter').value = 'all';
-        document.getElementById('date-filter').value = '';
-        loadClaims();
+    // Mettre en surbrillance une réclamation dans la sidebar
+    function highlightClaimInSidebar(claimId) {
+        activeClaimId = claimId;
+        document.querySelectorAll('.claim-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.claimId === claimId.toString());
+        });
     }
 
-    // Écouteurs d'événements
-    document.getElementById('search-btn').addEventListener('click', loadClaims);
-    document.getElementById('reset-btn').addEventListener('click', resetFilters);
+    // Appliquer les filtres
+    document.getElementById('apply-filters').addEventListener('click', loadClaims);
 
     // Chargement initial
     loadClaims();
-    addLegend();
 });
 </script>
 {% endblock %}

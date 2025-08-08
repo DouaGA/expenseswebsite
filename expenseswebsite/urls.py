@@ -35,7 +35,8 @@ urlpatterns = [
     path('citizen/claims/<int:pk>/', views.citizen_claim_detail, name='citizen_claim_detail'),
     path('citizen/claims/<int:pk>/edit/', views.edit_claim, name='edit_claim'),
     path('citizen/claims/<int:pk>/delete/', views.delete_claim, name='delete_claim'),
-    
+    path('api/claims/', views.api_claims, name='api_claims'),
+
     path('profile/', views.profile_view, name='profile'),
     path('profile/edit/', views.edit_profile, name='edit_profile'),
     

@@ -1,205 +1,190 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Détails de la réclamation #{{ claim.id }}</title>
+{% load static %}
+
+{% block title %}Détails de la Réclamation - GreenMap{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<style>
+    :root {
+        --primary-color: #1e5631;
+        --secondary-color: #4CAF50;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
+        --info-color: #17a2b8;
+    }
     
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    .claim-header {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 20px;
+        border-radius: 8px 8px 0 0;
+    }
     
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    .claim-body {
+        padding: 30px;
+        background-color: white;
+        border-radius: 0 0 8px 8px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
     
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    .info-section {
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #eee;
+    }
     
-    <style>
-        body {
-            background-color: #f8f9fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    .info-section:last-child {
+        border-bottom: none;
+    }
+    
+    .status-badge {
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 1rem;
+    }
+    
+    .badge-pending {
+        background-color: var(--warning-color);
+        color: #333;
+    }
+    
+    .badge-accepted {
+        background-color: var(--secondary-color);
+        color: white;
+    }
+    
+    .badge-rejected {
+        background-color: var(--danger-color);
+        color: white;
+    }
+    
+    #claimMap {
+        height: 400px;
+        width: 100%;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 15px;
+        margin-top: 30px;
+    }
+    
+    .action-buttons .btn {
+        flex: 1;
+        padding: 12px;
+        font-size: 1.1rem;
+        font-weight: 500;
+    }
+    
+    .evidence-image {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .evidence-image:hover {
+        transform: scale(1.02);
+    }
+    
+    @media (max-width: 768px) {
+        .action-buttons {
+            flex-direction: column;
         }
         
-        .card {
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        
-        .card-header {
-            font-weight: 600;
-        }
-        
-        .detail-item {
-            margin-bottom: 15px;
-        }
-        
-        .detail-label {
-            font-weight: 600;
-            color: #495057;
-        }
-        
-        .detail-value {
-            color: #212529;
-        }
-        
-        #map {
+        #claimMap {
             height: 300px;
-            width: 100%;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
         }
-        
-        .custom-marker {
-            background: none !important;
-            border: none !important;
-        }
-        
-        .badge.bg-warning {
-            color: #212529;
-        }
-        
-        .attachment-preview {
-            max-width: 100%;
-            max-height: 200px;
-            border-radius: 5px;
-            border: 1px solid #dee2e6;
-        }
-    </style>
-</head>
-<body>
-    <div class="container mt-4">
-        <div class="card shadow">
-            <div class="card-header {% if claim.status == 'accepted' %}bg-success{% elif claim.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %} text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h2 class="mb-0">
-                        <i class="fas fa-file-alt me-2"></i>Réclamation #{{ claim.id }}
-                    </h2>
-                    <a href="{% url 'claims_list' %}" class="btn btn-light btn-sm">
-                        <i class="fas fa-arrow-left me-1"></i> Retour
-                    </a>
-                </div>
-            </div>
-            
-            <div class="card-body">
-                <!-- Section Informations de base -->
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <h4 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations</h4>
-                            </div>
-                            <div class="card-body">
-                                <div class="detail-item">
-                                    <div class="detail-label">Titre</div>
-                                    <div class="detail-value">{{ claim.title }}</div>
-                                </div>
-                                <div class="detail-item">
-                                    <div class="detail-label">Type</div>
-                                    <div class="detail-value">{{ claim.claim_type.name|default:"Non spécifié" }}</div>
-                                </div>
-                                <div class="detail-item">
-                                    <div class="detail-label">Municipalité</div>
-                                    <div class="detail-value">{{ claim.municipality.name|default:"Non spécifié" }}</div>
-                                </div>
-                                <div class="detail-item">
-                                    <div class="detail-label">Statut</div>
-                                    <div class="detail-value">
-                                        <span class="badge bg-{% if claim.status == 'accepted' %}success
-                                                             {% elif claim.status == 'rejected' %}danger
-                                                             {% else %}warning{% endif %}">
-                                            {{ claim.get_status_display }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="claim-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="mb-0">
+                <i class="fas fa-file-alt me-2"></i>Réclamation #{{ claim.id }}
+            </h1>
+            <span class="status-badge badge-{{ claim.status }}">
+                {{ claim.get_status_display }}
+            </span>
+        </div>
+    </div>
+    
+    <div class="claim-body">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="info-section">
+                    <h3><i class="fas fa-info-circle me-2"></i>Informations de base</h3>
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <p><strong>Titre :</strong> {{ claim.title }}</p>
+                            <p><strong>Type :</strong> {{ claim.claim_type.name }}</p>
+                            <p><strong>Créé par :</strong> {{ claim.created_by.get_full_name|default:claim.created_by.username }}</p>
                         </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header bg-light">
-                                <h4 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Dates</h4>
-                            </div>
-                            <div class="card-body">
-                                <div class="detail-item">
-                                    <div class="detail-label">Créée le</div>
-                                    <div class="detail-value">{{ claim.created_at|date:"d/m/Y H:i" }}</div>
-                                </div>
-                                {% if claim.status != 'pending' %}
-                                <div class="detail-item">
-                                    <div class="detail-label">Traitée le</div>
-                                    <div class="detail-value">{{ claim.updated_at|date:"d/m/Y H:i" }}</div>
-                                </div>
-                                <div class="detail-item">
-                                    <div class="detail-label">Durée de traitement</div>
-                                    <div class="detail-value">{{ claim.updated_at|timesince:claim.created_at }}</div>
-                                </div>
-                                {% endif %}
-                            </div>
+                        <div class="col-md-6">
+                            <p><strong>Date de création :</strong> {{ claim.created_at|date:"d/m/Y H:i" }}</p>
+                            {% if claim.status != 'pending' %}
+                            <p><strong>Date de traitement :</strong> {{ claim.updated_at|date:"d/m/Y H:i" }}</p>
+                            <p><strong>Temps de traitement :</strong> {{ claim.updated_at|timesince:claim.created_at }}</p>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
                 
-                <!-- Section Description -->
-                <div class="card mb-4">
-                    <div class="card-header bg-light">
-                        <h4 class="mb-0"><i class="fas fa-align-left me-2"></i>Description</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="p-3 bg-light rounded">
-                            {{ claim.description|linebreaks }}
-                        </div>
+                <div class="info-section">
+                    <h3><i class="fas fa-align-left me-2"></i>Description</h3>
+                    <div class="mt-3 p-3 bg-light rounded">
+                        {{ claim.description|linebreaks }}
                     </div>
                 </div>
                 
-                <!-- Section Localisation -->
-                <div class="card mb-4">
-                    <div class="card-header bg-light">
-                        <h4 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Localisation</h4>
-                    </div>
-                    <div class="card-body">
-                        <div id="map"></div>
-                        <p class="mt-2">
-                            <strong>Coordonnées :</strong> {{ claim.location_lat|floatformat:6 }}, {{ claim.location_lng|floatformat:6 }}
-                        </p>
-                    </div>
-                </div>
-                
-                <!-- Section Pièce jointe -->
-                {% if claim.attachment %}
-                <div class="card mb-4">
-                    <div class="card-header bg-light">
-                        <h4 class="mb-0"><i class="fas fa-paperclip me-2"></i>Pièce jointe</h4>
-                    </div>
-                    <div class="card-body">
-                        {% if claim.attachment.url|lower|slice:'-4:' == '.jpg' or claim.attachment.url|lower|slice:'-5:' == '.jpeg' or claim.attachment.url|lower|slice:'-4:' == '.png' %}
-                            <img src="{{ claim.attachment.url }}" class="attachment-preview mb-3" alt="Pièce jointe">
-                            <br>
-                        {% endif %}
-                        <a href="{{ claim.attachment.url }}" target="_blank" class="btn btn-outline-primary">
-                            <i class="fas fa-download me-2"></i>Télécharger
-                        </a>
+                {% if claim.evidence %}
+                <div class="info-section">
+                    <h3><i class="fas fa-image me-2"></i>Preuve</h3>
+                    <div class="mt-3 text-center">
+                        <img src="{{ claim.evidence.url }}" alt="Preuve de la réclamation" class="evidence-image img-fluid">
                     </div>
                 </div>
                 {% endif %}
-                
-                <!-- Section Actions -->
-                {% if claim.status == 'pending' %}
-                <div class="card">
-                    <div class="card-header bg-light">
-                        <h4 class="mb-0"><i class="fas fa-cogs me-2"></i>Actions</h4>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="info-section">
+                    <h3><i class="fas fa-map-marker-alt me-2"></i>Localisation</h3>
+                    {% if claim.location_lat and claim.location_lng %}
+                    <div id="claimMap"></div>
+                    <div class="mt-3">
+                        <p><strong>Adresse :</strong> {{ claim.address|default:"Non spécifiée" }}</p>
+                        <p><strong>Municipalité :</strong> {{ claim.municipality.name }}</p>
                     </div>
-                    <div class="card-body">
-                        <form method="post">
+                    {% else %}
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Aucune localisation disponible
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if claim.status == 'pending' %}
+                <div class="info-section">
+                    <h3><i class="fas fa-cogs me-2"></i>Actions</h3>
+                    <div class="action-buttons">
+                        <form method="post" action="{% url 'update_claim_status' claim.id 'accepted' %}">
                             {% csrf_token %}
-                            <div class="d-flex justify-content-center gap-3">
-                                <button type="submit" name="status" value="accepted" class="btn btn-success btn-lg px-4">
-                                    <i class="fas fa-check-circle me-2"></i>Accepter
-                                </button>
-                                <button type="submit" name="status" value="rejected" class="btn btn-danger btn-lg px-4">
-                                    <i class="fas fa-times-circle me-2"></i>Rejeter
-                                </button>
-                            </div>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-check-circle me-2"></i>Accepter
+                            </button>
+                        </form>
+                        <form method="post" action="{% url 'update_claim_status' claim.id 'rejected' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-times-circle me-2"></i>Rejeter
+                            </button>
                         </form>
                     </div>
                 </div>
@@ -207,57 +192,45 @@
             </div>
         </div>
     </div>
+</div>
+{% endblock %}
 
-    <!-- Bootstrap JS Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% if claim.location_lat and claim.location_lng %}
+    // Initialiser la carte si la réclamation a des coordonnées
+    const map = L.map('claimMap').setView(
+        [{{ claim.location_lat }}, {{ claim.location_lng }}], 
+        15
+    );
     
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
     
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialisation de la carte
-        const map = L.map('map').setView([{{ claim.location_lat }}, {{ claim.location_lng }}], 15);
-        
-        // Ajout du fond de carte
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        }).addTo(map);
-        
-        // Couleur selon le statut
-        const statusColor = {
-            'pending': 'orange',
-            'accepted': 'green',
-            'rejected': 'red'
-        }['{{ claim.status }}'];
-        
-        // Ajout du marqueur personnalisé
-        const marker = L.marker(
-            [{{ claim.location_lat }}, {{ claim.location_lng }}],
-            {
-                icon: L.divIcon({
-                    className: 'custom-marker',
-                    html: `<div style="background: ${statusColor}; 
-                                  width: 24px; 
-                                  height: 24px; 
-                                  border-radius: 50%; 
-                                  border: 2px solid white;
-                                  transform: translate(-12px, -12px);"></div>`,
-                    iconSize: [24, 24]
-                })
-            }
-        ).addTo(map);
-        
-        // Popup avec les infos
-        marker.bindPopup(`
-            <b>Réclamation #{{ claim.id }}</b><br>
-            {{ claim.title }}<br>
-            Statut: {{ claim.get_status_display }}
-        `);
-        
-        // Ouvrir le popup par défaut
-        marker.openPopup();
-    });
-    </script>
-</body>
-</html>
+    // Ajouter un marqueur pour la réclamation
+    const marker = L.marker(
+        [{{ claim.location_lat }}, {{ claim.location_lng }}],
+        {
+            icon: L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-{% if claim.status == 'accepted' %}green{% elif claim.status == 'rejected' %}red{% else %}gold{% endif %}.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+            })
+        }
+    ).addTo(map);
+    
+    marker.bindPopup(`
+        <b>{{ claim.title }}</b><br>
+        <small>Type: {{ claim.claim_type.name }}</small><br>
+        <small>Statut: {{ claim.get_status_display }}</small>
+    `).openPopup();
+    {% endif %}
+});
+</script>
+{% endblock %}

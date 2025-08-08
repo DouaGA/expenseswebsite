@@ -1,163 +1,168 @@
 {% load static %}
-{% block title %}Tableau de bord Agent - GreenMap{% endblock %}
+{% block title %}Tableau de bord Agent - CityCare{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 <style>
-    /* Layout Styles */
+    :root {
+        --primary-color: #1e5631;
+        --secondary-color: #4CAF50;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
+        --info-color: #17a2b8;
+        --light-color: #f8f9fa;
+        --dark-color: #343a40;
+        --sidebar-width: 250px;
+        --transition-speed: 0.3s;
+    }
+
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f5f5f5;
+        color: #333;
+        line-height: 1.6;
+    }
+
     .main-container {
         display: flex;
         min-height: 100vh;
     }
     
-    /* Sidebar Styles */
-.sidebar {
-    width: 250px;
-    height: 100vh;
-    background: #1e5631; /* Nouvelle couleur verte foncée */
-    color: #ecf0f1;
-    position: fixed;
-    left: 0;
-    top: 0;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-    z-index: 1000;
-}
-
-.sidebar-header {
-    padding: 20px;
-    text-align: center;
-    background-color: #1a4d2a; /* Un vert légèrement plus foncé pour le header */
-}
-
-.sidebar-header .logo {
-    margin: 0;
-    font-size: 1.5rem;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.sidebar-header .logo i {
-    margin-right: 10px;
-    color: #4ccb7e; /* Vert plus clair pour l'icône */
-}
-
-.sidebar-header .subtitle {
-    margin: 5px 0 0;
-    font-size: 0.8rem;
-    color: #bdc3c7;
-}
-
-.sidebar-nav {
-    flex: 1;
-    padding: 20px 0;
-    overflow-y: auto;
-}
-
-.sidebar-nav ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.sidebar-nav li {
-    margin-bottom: 5px;
-}
-
-.sidebar-nav a {
-    display: flex;
-    align-items: center;
-    padding: 12px 20px;
-    color: #ecf0f1;
-    text-decoration: none;
-    transition: all 0.3s;
-    font-size: 0.95rem;
-}
-
-.sidebar-nav a:hover {
-    background: rgba(255,255,255,0.1);
-    padding-left: 25px;
-}
-
-.sidebar-nav a.active {
-    background: rgba(76, 203, 126, 0.2); /* Vert plus clair pour l'élément actif */
-    border-left: 4px solid #4ccb7e;
-    color: #fff;
-}
-
-.sidebar-nav i {
-    width: 24px;
-    text-align: center;
-    margin-right: 12px;
-    font-size: 1.1rem;
-}
-
-.sidebar-nav .logout-item a {
-    color: #ff6b6b; /* Rouge plus doux */
-}
-
-.sidebar-nav .logout-item a:hover {
-    background: rgba(255, 107, 107, 0.1);
-}
-
-.sidebar-footer {
-    padding: 15px 20px;
-    border-top: 1px solid rgba(255,255,255,0.1);
-    background-color: #1a4d2a; /* Même couleur que le header */
-}
-
-.user-info {
-    display: flex;
-    align-items: center;
-    font-size: 0.9rem;
-}
-
-.user-info i {
-    margin-right: 10px;
-    font-size: 1.2rem;
-    color: #4ccb7e; /* Vert clair pour l'icône utilisateur */
-}
-
-/* Main content adjustment */
-.main-content {
-    margin-left: 250px;
-    padding: 20px;
-    width: calc(100% - 250px);
-}
-
-    /* Dashboard Styles */
-    .stat-card {
-        border-radius: 10px;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    .sidebar {
+        width: var(--sidebar-width);
+        height: 100vh;
+        background: var(--primary-color);
+        color: #ecf0f1;
+        position: fixed;
+        left: 0;
+        top: 0;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        z-index: 1000;
+        transition: transform var(--transition-speed) ease;
+    }
+    
+    .main-content {
+        margin-left: var(--sidebar-width);
+        padding: 20px;
+        width: calc(100% - var(--sidebar-width));
+        transition: margin-left var(--transition-speed) ease, width var(--transition-speed) ease;
+    }
+    
+    .sidebar-header {
+        padding: 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .logo {
+        color: white;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    .sidebar-nav {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px 0;
+    }
+    
+    .sidebar-nav ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .sidebar-nav li a {
+        display: block;
+        padding: 12px 20px;
+        color: rgba(255,255,255,0.8);
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    
+    .sidebar-nav li a:hover,
+    .sidebar-nav li a.active {
+        background-color: rgba(255,255,255,0.1);
+        color: white;
+    }
+    
+    .sidebar-nav li a i {
+        width: 20px;
+        margin-right: 10px;
+        text-align: center;
+    }
+    
+    .sidebar-footer {
+        padding: 15px 20px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .user-info {
+        display: flex;
+        align-items: center;
+        color: white;
+    }
+    
+    .user-info i {
+        margin-right: 10px;
+        font-size: 1.2rem;
+    }
+    
+    .card {
         border: none;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
         overflow: hidden;
+    }
+    
+    .card-header {
+        padding: 15px 20px;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    
+    .card-header.bg-primary {
+        background-color: var(--primary-color) !important;
+    }
+    
+    .card-body {
+        padding: 20px;
+    }
+    
+    .bg-pending {
+        background-color: var(--warning-color) !important;
+    }
+    
+    .bg-accepted {
+        background-color: var(--secondary-color) !important;
+    }
+    
+    .bg-rejected {
+        background-color: var(--danger-color) !important;
+    }
+    
+    .text-pending {
+        color: var(--warning-color) !important;
+    }
+    
+    .text-accepted {
+        color: var(--secondary-color) !important;
+    }
+    
+    .text-rejected {
+        color: var(--danger-color) !important;
+    }
+    
+    .stat-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid transparent;
     }
     
     .stat-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 6px 10px rgba(0,0,0,0.15);
-    }
-    
-    .stat-card .card-body {
-        padding: 1.5rem;
-    }
-    
-    .stat-card h6 {
-        font-size: 0.9rem;
-        opacity: 0.9;
-        margin-bottom: 0.5rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-    
-    .stat-card h2 {
-        font-weight: 700;
-        margin-bottom: 0;
-        font-size: 2rem;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
     }
     
     .stat-card .icon-wrapper {
@@ -169,108 +174,74 @@
         justify-content: center;
         background-color: rgba(255,255,255,0.2);
     }
-
+    
     .chart-container {
-        height: 280px;
-        min-height: 280px;
         position: relative;
+        height: 250px;
+        min-height: 250px;
     }
     
     .claim-item {
+        padding: 15px;
         border-left: 4px solid transparent;
         transition: all 0.3s;
-        padding: 1rem;
-        margin-bottom: 0.5rem;
+        margin-bottom: 10px;
         border-radius: 4px;
+        background-color: white;
     }
     
     .claim-item:hover {
-        background-color: #f8f9fa;
         transform: translateX(5px);
     }
     
     .pending-item {
-        border-left-color: #ffc107;
+        border-left-color: var(--warning-color);
         background-color: rgba(255, 193, 7, 0.05);
     }
     
     .accepted-item {
-        border-left-color: #28a745;
+        border-left-color: var(--secondary-color);
         background-color: rgba(40, 167, 69, 0.05);
     }
     
     .rejected-item {
-        border-left-color: #dc3545;
+        border-left-color: var(--danger-color);
         background-color: rgba(220, 53, 69, 0.05);
     }
     
-    .card-header {
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #eee;
-        padding: 1rem 1.5rem;
-        border-radius: 10px 10px 0 0 !important;
+    .no-data-placeholder {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        color: #6c757d;
     }
     
-    .btn-action {
-        width: 10px;
-        height: 10px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0;
-        border-radius: 50%;
-        transition: all 0.2s;
+    .no-data-placeholder i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: #adb5bd;
     }
     
-    .btn-action:hover {
-        transform: scale(1.1);
-    }
-
-    /* Colors */
-    .bg-pending {
-        background-color: #ffc107 !important;
-    }
-    
-    .bg-accepted {
-        background-color: #28a745 !important;
-    }
-    
-    .bg-rejected {
-        background-color: #dc3545 !important;
-    }
-    
-    .text-pending {
-        color: #ffc107 !important;
-    }
-    
-    .text-accepted {
-        color: #28a745 !important;
-    }
-    
-    .text-rejected {
-        color: #dc3545 !important;
-    }
-
-    /* Mobile Toggle Button */
     #sidebarToggle {
         position: fixed;
         top: 10px;
         left: 10px;
         z-index: 1050;
         display: none;
-        background-color: #1e5631;
+        background-color: var(--primary-color);
+        color: white;
         border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
     
-    /* Responsive adjustments */
     @media (max-width: 992px) {
-        #sidebarToggle {
-            display: block;
-        }
-        
         .sidebar {
             transform: translateX(-100%);
-            transition: transform 0.3s ease;
         }
         
         .sidebar.active {
@@ -282,61 +253,25 @@
             width: 100%;
         }
         
-        /* Adjust cards for mobile */
-        .claims-row {
-            flex-direction: column;
+        #sidebarToggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
-        .claims-row > div {
-            width: 100%;
-            margin-bottom: 20px;
-        }
-    }
-
-    /* No Data Placeholder */
-    .no-data-placeholder {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        text-align: center;
-        color: #6c757d;
-        z-index: 1;
-    }
-
-    .no-data-placeholder i {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-        display: block;
-        color: #adb5bd;
-    }
-    
-    /* Grid layout for claims cards */
-    .claims-row {
-        display: flex;
-        flex-wrap: wrap;
-        margin-right: -15px;
-        margin-left: -15px;
-    }
-    
-    .claims-row > div {
-        flex: 0 0 33.333333%;
-        max-width: 33.333333%;
-        padding-right: 15px;
-        padding-left: 15px;
-    }
-    
-    @media (max-width: 1200px) {
-        .claims-row > div {
-            flex: 0 0 50%;
-            max-width: 50%;
+        .chart-container {
+            height: 200px;
         }
     }
     
     @media (max-width: 768px) {
-        .claims-row > div {
-            flex: 0 0 100%;
-            max-width: 100%;
+        .stat-card .icon-wrapper {
+            width: 50px;
+            height: 50px;
+        }
+        
+        .stat-card h2 {
+            font-size: 1.5rem;
         }
     }
 </style>
@@ -403,24 +338,23 @@
     <!-- Main Content -->
     <div class="main-content">
         <!-- Mobile Toggle Button -->
-        <button class="btn btn-sm" id="sidebarToggle">
-            <i class="fas fa-bars text-white"></i>
+        <button class="btn" id="sidebarToggle" aria-label="Toggle sidebar">
+            <i class="fas fa-bars"></i>
         </button>
 
-        <!-- Dashboard Content -->
         <div class="container-fluid">
             <h2 class="mb-4">Tableau de bord</h2>
             
-            <!-- Status Cards -->
+            <!-- Stats Cards -->
             <div class="row mb-4">
-                <div class="col-xl-4 col-md-6 mb-4">
+                <div class="col-md-4 mb-4">
                     <div class="card stat-card bg-pending text-white">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
                                     <h6><i class="fas fa-clock me-1"></i> EN ATTENTE</h6>
-                                    <h2 class="mb-0">{{ total_pending }}</h2>
-                                    <small class="opacity-75">{{ pending_percentage }}% du total</small>
+                                    <h2 class="mb-0">{{ pending_claims.count }}</h2>
+                                    <small>{{ pending_percentage }}% du total</small>
                                 </div>
                                 <div class="icon-wrapper">
                                     <i class="fas fa-hourglass-half fa-2x"></i>
@@ -429,15 +363,15 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="col-xl-4 col-md-6 mb-4">
+                
+                <div class="col-md-4 mb-4">
                     <div class="card stat-card bg-accepted text-white">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
                                     <h6><i class="fas fa-check-circle me-1"></i> ACCEPTÉES</h6>
-                                    <h2 class="mb-0">{{ total_accepted }}</h2>
-                                    <small class="opacity-75">{{ accepted_percentage }}% du total</small>
+                                    <h2 class="mb-0">{{ accepted_claims.count }}</h2>
+                                    <small>{{ accepted_percentage }}% du total</small>
                                 </div>
                                 <div class="icon-wrapper">
                                     <i class="fas fa-thumbs-up fa-2x"></i>
@@ -446,15 +380,15 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="col-xl-4 col-md-6 mb-4">
+                
+                <div class="col-md-4 mb-4">
                     <div class="card stat-card bg-rejected text-white">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
                                     <h6><i class="fas fa-times-circle me-1"></i> REJETÉES</h6>
-                                    <h2 class="mb-0">{{ total_rejected }}</h2>
-                                    <small class="opacity-75">{{ rejected_percentage }}% du total</small>
+                                    <h2 class="mb-0">{{ rejected_claims.count }}</h2>
+                                    <small>{{ rejected_percentage }}% du total</small>
                                 </div>
                                 <div class="icon-wrapper">
                                     <i class="fas fa-thumbs-down fa-2x"></i>
@@ -464,19 +398,18 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Charts Row 1 -->
+            
+            <!-- Charts Row -->
             <div class="row mb-4">
-                <!-- Type Chart (Radar) -->
-                <div class="col-lg-4 mb-4">
+                <div class="col-lg-6 mb-4">
                     <div class="card shadow-sm h-100">
                         <div class="card-header">
-                            <h5 class="mb-0"><i class="fas fa-chart-radar me-2"></i>RÉPARTITION PAR TYPE</h5>
+                            <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Répartition par statut</h5>
                         </div>
                         <div class="card-body">
-                            <div class="chart-container radar-chart-container">
-                                <canvas id="typeChart"></canvas>
-                                {% if not has_data %}
+                            <div class="chart-container">
+                                <canvas id="statusChart"></canvas>
+                                {% if not claims.exists %}
                                 <div class="no-data-placeholder">
                                     <i class="fas fa-chart-pie"></i>
                                     <p>Aucune donnée disponible</p>
@@ -486,17 +419,16 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Evolution Chart (Line) -->
-                <div class="col-lg-4 mb-4">
+                
+                <div class="col-lg-6 mb-4">
                     <div class="card shadow-sm h-100">
                         <div class="card-header">
-                            <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>ÉVOLUTION (30 JOURS)</h5>
+                            <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Évolution (7 jours)</h5>
                         </div>
                         <div class="card-body">
                             <div class="chart-container">
                                 <canvas id="evolutionChart"></canvas>
-                                {% if not has_data %}
+                                {% if not claims.exists %}
                                 <div class="no-data-placeholder">
                                     <i class="fas fa-chart-line"></i>
                                     <p>Aucune donnée disponible</p>
@@ -506,136 +438,98 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Status Chart (Doughnut) -->
-                <div class="col-lg-4 mb-4">
-                    <div class="card shadow-sm h-100">
-                        <div class="card-header">
-                            <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>RÉPARTITION PAR STATUT</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="chart-container">
-                                <canvas id="statusChart"></canvas>
-                                {% if not has_data %}
-                                <div class="no-data-placeholder">
-                                    <i class="fas fa-chart-pie"></i>
-                                    <p>Aucune donnée disponible</p>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
-
-            <!-- Claims Lists Row 2 -->
-            <div class="row claims-row">
-                <!-- Pending Claims -->
+            
+            <!-- Claims Lists -->
+            <div class="row">
                 <div class="col-lg-4 mb-4">
                     <div class="card shadow-sm h-100">
                         <div class="card-header bg-pending text-white">
-                            <h5 class="mb-0"><i class="fas fa-clock me-2"></i>DERNIÈRES EN ATTENTE</h5>
+                            <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Dernières en attente</h5>
                         </div>
-                        <div class="card-body p-0">
-                            <div class="list-group list-group-flush">
-                                {% for claim in pending_claims %}
-                                <div class="list-group-item claim-item pending-item">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="mb-0 font-weight-bold">{{ claim.title|truncatechars:30 }}</h6>
-                                        <small class="text-muted">{{ claim.created_at|date:"d/m/Y" }}</small>
-                                    </div>
-                                    <p class="mb-2 text-muted small">{{ claim.description|truncatechars:60 }}</p>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <small class="text-pending">
-                                            <i class="fas fa-clock"></i> En attente depuis {{ claim.created_at|timesince }}
-                                        </small>
-                                        <div>
-                                            <button class="btn btn-success btn-action me-1" title="Accepter" onclick="updateClaimStatus({{ claim.id }}, 'accepted')">
-                                                <i class="fas fa-check"></i>
-                                            </button>
-                                            <button class="btn btn-danger btn-action" title="Rejeter" onclick="updateClaimStatus({{ claim.id }}, 'rejected')">
-                                                <i class="fas fa-times"></i>
-                                            </button>
-                                        </div>
+                        <div class="card-body">
+                            {% for claim in pending_claims|slice:":5" %}
+                            <div class="claim-item pending-item mb-3">
+                                <h6>{{ claim.title|truncatechars:30 }}</h6>
+                                <p class="small text-muted mb-2">{{ claim.description|truncatechars:60 }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-pending">
+                                        <i class="fas fa-clock"></i> {{ claim.created_at|timesince }}
+                                    </small>
+                                    <div>
+                                        <button class="btn btn-sm btn-success me-1" onclick="updateClaimStatus({{ claim.id }}, 'accepted')">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" onclick="updateClaimStatus({{ claim.id }}, 'rejected')">
+                                            <i class="fas fa-times"></i>
+                                        </button>
                                     </div>
                                 </div>
-                                {% empty %}
-                                <div class="list-group-item text-center py-4">
-                                    <i class="fas fa-check-circle fa-2x text-muted mb-2"></i>
-                                    <p class="mb-0 text-muted">Aucune réclamation en attente</p>
-                                </div>
-                                {% endfor %}
                             </div>
+                            {% empty %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-check-circle fa-2x text-muted mb-2"></i>
+                                <p class="mb-0 text-muted">Aucune réclamation en attente</p>
+                            </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
                 
-                <!-- Accepted Claims -->
                 <div class="col-lg-4 mb-4">
                     <div class="card shadow-sm h-100">
                         <div class="card-header bg-accepted text-white">
-                            <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>DERNIÈRES ACCEPTÉES</h5>
+                            <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Dernières acceptées</h5>
                         </div>
-                        <div class="card-body p-0">
-                            <div class="list-group list-group-flush">
-                                {% for claim in accepted_claims %}
-                                <div class="list-group-item claim-item accepted-item">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="mb-0 font-weight-bold">{{ claim.title|truncatechars:30 }}</h6>
-                                        <small class="text-muted">{{ claim.created_at|date:"d/m/Y" }}</small>
-                                    </div>
-                                    <p class="mb-2 text-muted small">{{ claim.description|truncatechars:60 }}</p>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <small class="text-accepted">
-                                            <i class="fas fa-check-circle"></i> Acceptée le {{ claim.updated_at|date:"d/m/Y" }}
-                                        </small>
-                                        <a href="{% url 'core:agent_claim_detail' claim.id %}" class="btn btn-outline-secondary btn-sm">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                    </div>
+                        <div class="card-body">
+                            {% for claim in accepted_claims|slice:":5" %}
+                            <div class="claim-item accepted-item mb-3">
+                                <h6>{{ claim.title|truncatechars:30 }}</h6>
+                                <p class="small text-muted mb-2">{{ claim.description|truncatechars:60 }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-accepted">
+                                        <i class="fas fa-check-circle"></i> {{ claim.updated_at|date:"d/m/Y" }}
+                                    </small>
+                                    <a href="{% url 'agent_claim_detail' claim.id %}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
                                 </div>
-                                {% empty %}
-                                <div class="list-group-item text-center py-4">
-                                    <i class="fas fa-check-circle fa-2x text-muted mb-2"></i>
-                                    <p class="mb-0 text-muted">Aucune réclamation acceptée</p>
-                                </div>
-                                {% endfor %}
                             </div>
+                            {% empty %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-check-circle fa-2x text-muted mb-2"></i>
+                                <p class="mb-0 text-muted">Aucune réclamation acceptée</p>
+                            </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
                 
-                <!-- Rejected Claims -->
                 <div class="col-lg-4 mb-4">
                     <div class="card shadow-sm h-100">
                         <div class="card-header bg-rejected text-white">
-                            <h5 class="mb-0"><i class="fas fa-times-circle me-2"></i>DERNIÈRES REJETÉES</h5>
+                            <h5 class="mb-0"><i class="fas fa-times-circle me-2"></i>Dernières rejetées</h5>
                         </div>
-                        <div class="card-body p-0">
-                            <div class="list-group list-group-flush">
-                                {% for claim in rejected_claims %}
-                                <div class="list-group-item claim-item rejected-item">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="mb-0 font-weight-bold">{{ claim.title|truncatechars:30 }}</h6>
-                                        <small class="text-muted">{{ claim.created_at|date:"d/m/Y" }}</small>
-                                    </div>
-                                    <p class="mb-2 text-muted small">{{ claim.description|truncatechars:60 }}</p>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <small class="text-rejected">
-                                            <i class="fas fa-times-circle"></i> Rejetée le {{ claim.updated_at|date:"d/m/Y" }}
-                                        </small>
-                                        <a href="{% url 'core:agent_claim_detail' claim.id %}" class="btn btn-outline-secondary btn-sm">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                    </div>
+                        <div class="card-body">
+                            {% for claim in rejected_claims|slice:":5" %}
+                            <div class="claim-item rejected-item mb-3">
+                                <h6>{{ claim.title|truncatechars:30 }}</h6>
+                                <p class="small text-muted mb-2">{{ claim.description|truncatechars:60 }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-rejected">
+                                        <i class="fas fa-times-circle"></i> {{ claim.updated_at|date:"d/m/Y" }}
+                                    </small>
+                                    <a href="{% url 'agent_claim_detail' claim.id %}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
                                 </div>
-                                {% empty %}
-                                <div class="list-group-item text-center py-4">
-                                    <i class="fas fa-times-circle fa-2x text-muted mb-2"></i>
-                                    <p class="mb-0 text-muted">Aucune réclamation rejetée</p>
-                                </div>
-                                {% endfor %}
                             </div>
+                            {% empty %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-times-circle fa-2x text-muted mb-2"></i>
+                                <p class="mb-0 text-muted">Aucune réclamation rejetée</p>
+                            </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
@@ -647,92 +541,52 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 <script>
-// Sidebar Toggle for Mobile
-// Sidebar Toggle for Mobile
-document.getElementById('sidebarToggle').addEventListener('click', function() {
-    document.querySelector('.sidebar').classList.toggle('active');
-});
-
-// Charts Initialization
 document.addEventListener('DOMContentLoaded', function() {
-    const hasData = {{ has_data|yesno:"true,false" }};
-    if (!hasData) return;
+    // Sidebar Toggle
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebar = document.querySelector('.sidebar');
+    
+    sidebarToggle.addEventListener('click', function() {
+        sidebar.classList.toggle('active');
+    });
 
-    const chartColors = {
-        pending: '#ffc107',
-        accepted: '#28a745',
-        rejected: '#dc3545',
-        others: ['#17a2b8', '#6c757d', '#343a40', '#6610f2', '#fd7e14']
-    };
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', function(event) {
+        if (window.innerWidth <= 992 && 
+            !sidebar.contains(event.target) && 
+            !sidebarToggle.contains(event.target) && 
+            sidebar.classList.contains('active')) {
+            sidebar.classList.remove('active');
+        }
+    });
 
-    function hidePlaceholder(canvasId) {
-        const placeholder = document.querySelector(`#${canvasId}`).parentNode.querySelector('.no-data-placeholder');
-        if (placeholder) placeholder.style.display = 'none';
-    }
-
-    // Type Chart (Radar)
-    const typeCtx = document.getElementById('typeChart');
-    if (typeCtx && {{ type_data|safe }}.some(item => item > 0)) {
-        hidePlaceholder('typeChart');
-        new Chart(typeCtx, {
-            type: 'radar',
-            data: {
-                labels: {{ type_labels|safe }},
-                datasets: [{
-                    label: 'Nombre de réclamations',
-                    data: {{ type_data|safe }},
-                    backgroundColor: 'rgba(0, 123, 255, 0.2)',
-                    borderColor: '#007bff',
-                    borderWidth: 2,
-                    pointBackgroundColor: '#007bff',
-                    pointBorderColor: '#fff',
-                    pointHoverRadius: 5
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { r: {
-                    angleLines: { display: true, color: 'rgba(0, 0, 0, 0.1)' },
-                    suggestedMin: 0,
-                    ticks: {
-                        backdropColor: 'rgba(255, 255, 255, 0.8)',
-                        color: '#6c757d',
-                        font: { size: 10 },
-                        stepSize: 1
-                    },
-                    pointLabels: { font: { size: 11 }, color: '#495057' },
-                    grid: { color: 'rgba(0, 0, 0, 0.1)' }
-                }},
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return `${context.label}: ${context.raw} réclamation(s)`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-
+    // Initialize charts if data exists
+    {% if claims.exists %}
     // Status Chart (Doughnut)
     const statusCtx = document.getElementById('statusChart');
-    if (statusCtx && {{ status_data|safe }}.some(item => item > 0)) {
-        hidePlaceholder('statusChart');
-        new Chart(statusCtx, {
+    if (statusCtx) {
+        const statusChart = new Chart(statusCtx, {
             type: 'doughnut',
             data: {
-                labels: {{ status_labels|safe }},
+                labels: ['En attente', 'Acceptées', 'Rejetées'],
                 datasets: [{
-                    data: {{ status_data|safe }},
-                    backgroundColor: [chartColors.pending, chartColors.accepted, chartColors.rejected],
-                    borderWidth: 1,
-                    borderColor: '#fff'
+                    data: [
+                        {{ pending_claims.count }},
+                        {{ accepted_claims.count }},
+                        {{ rejected_claims.count }}
+                    ],
+                    backgroundColor: [
+                        'rgba(255, 193, 7, 0.8)',
+                        'rgba(40, 167, 69, 0.8)',
+                        'rgba(220, 53, 69, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 193, 7, 1)',
+                        'rgba(40, 167, 69, 1)',
+                        'rgba(220, 53, 69, 1)'
+                    ],
+                    borderWidth: 1
                 }]
             },
             options: {
@@ -741,59 +595,83 @@ document.addEventListener('DOMContentLoaded', function() {
                 plugins: {
                     legend: {
                         position: 'right',
-                        labels: {
-                            padding: 20,
-                            usePointStyle: true,
-                            pointStyle: 'circle',
-                            font: { size: 12 }
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = Math.round((context.raw / total) * 100);
-                                return `${context.label}: ${context.raw} (${percentage}%)`;
-                            }
-                        }
-                    },
-                    datalabels: {
-                        formatter: (value, ctx) => {
-                            const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                            const percentage = Math.round((value / total) * 100);
-                            return percentage > 5 ? `${percentage}%` : '';
-                        },
-                        color: '#fff',
-                        font: { weight: 'bold' }
                     }
                 },
-                cutout: '70%',
-                animation: { animateScale: true, animateRotate: true }
-            },
-            plugins: [ChartDataLabels]
+                cutout: '70%'
+            }
         });
     }
 
     // Evolution Chart (Line)
     const evolutionCtx = document.getElementById('evolutionChart');
-    if (evolutionCtx && {{ daily_counts|safe }}.some(item => item > 0)) {
-        hidePlaceholder('evolutionChart');
-        new Chart(evolutionCtx, {
+    if (evolutionCtx) {
+        // Prepare data for last 7 days
+        const dates = [];
+        const pendingData = [];
+        const acceptedData = [];
+        const rejectedData = [];
+        
+        const today = new Date();
+        
+        // Generate dates for last 7 days
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            dates.push(date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }));
+            
+            // Initialize counts
+            pendingData.push(0);
+            acceptedData.push(0);
+            rejectedData.push(0);
+        }
+        
+        // Count claims by status for each day
+        {% for claim in claims %}
+            const claimDate = new Date('{{ claim.created_at|date:"Y-m-d" }}');
+            const dateStr = claimDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+            const dayIndex = dates.indexOf(dateStr);
+            
+            if (dayIndex !== -1) {
+                if ('{{ claim.status }}' === 'pending') {
+                    pendingData[dayIndex]++;
+                } else if ('{{ claim.status }}' === 'accepted') {
+                    acceptedData[dayIndex]++;
+                } else if ('{{ claim.status }}' === 'rejected') {
+                    rejectedData[dayIndex]++;
+                }
+            }
+        {% endfor %}
+        
+        const evolutionChart = new Chart(evolutionCtx, {
             type: 'line',
             data: {
-                labels: {{ dates|safe }},
-                datasets: [{
-                    label: 'Réclamations',
-                    data: {{ daily_counts|safe }},
-                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                    borderColor: chartColors.accepted,
-                    borderWidth: 2,
-                    tension: 0.3,
-                    fill: true,
-                    pointBackgroundColor: '#fff',
-                    pointBorderColor: chartColors.accepted,
-                    pointBorderWidth: 2
-                }]
+                labels: dates,
+                datasets: [
+                    {
+                        label: 'En attente',
+                        data: pendingData,
+                        borderColor: 'rgba(255, 193, 7, 1)',
+                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Acceptées',
+                        data: acceptedData,
+                        borderColor: 'rgba(40, 167, 69, 1)',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Rejetées',
+                        data: rejectedData,
+                        borderColor: 'rgba(220, 53, 69, 1)',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
             },
             options: {
                 responsive: true,
@@ -801,54 +679,40 @@ document.addEventListener('DOMContentLoaded', function() {
                 scales: {
                     y: {
                         beginAtZero: true,
-                        grid: { drawBorder: false, color: 'rgba(0, 0, 0, 0.05)' },
-                        ticks: { color: '#6c757d', precision: 0 },
-                        title: {
-                            display: true,
-                            text: 'Nombre de réclamations',
-                            color: '#6c757d'
-                        }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { color: '#6c757d' },
-                        title: { display: true, text: 'Date', color: '#6c757d' }
-                    }
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        callbacks: {
-                            label: function(context) {
-                                return `${context.dataset.label}: ${context.raw}`;
-                            }
+                        ticks: {
+                            precision: 0
                         }
                     }
                 }
             }
         });
     }
-});
+    {% endif %}
 
-// Update Claim Status
-function updateClaimStatus(claimId, status) {
-    if (!confirm(`Voulez-vous vraiment ${status === 'accepted' ? 'accepter' : 'rejeter'} cette réclamation ?`)) return;
-    
-    fetch(`{% url 'update_claim_status' 0 'status' %}`.replace('0', claimId).replace('status', status), {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => response.ok ? response.json() : response.json().then(err => { throw new Error(err.message || 'Erreur serveur') }))
-    .then(data => data.success ? window.location.reload() : alert(data.message || "Erreur lors de la mise à jour"))
-    .catch(error => {
-        console.error('Error:', error);
-        alert("Erreur : " + error.message);
-    });
-}
+    // Update Claim Status
+    function updateClaimStatus(claimId, status) {
+        if (!confirm(`Voulez-vous vraiment ${status === 'accepted' ? 'accepter' : 'rejeter'} cette réclamation ?`)) return;
+        
+        fetch(`{% url 'update_claim_status' 0 'status' %}`.replace('0', claimId).replace('status', status), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert(data.error || "Erreur lors de la mise à jour");
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert("Une erreur s'est produite");
+        });
+    }
+});
 </script>
 {% endblock %}
