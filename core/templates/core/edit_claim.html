@@ -1,0 +1,229 @@
+{% load static %}
+{% load crispy_forms_tags %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modifier Réclamation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+        }
+        .form-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            padding: 25px;
+            margin-top: 30px;
+        }
+        #map-container {
+            height: 400px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+        .leaflet-container {
+            height: 100%;
+        }
+        #map-loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="form-container">
+                    <h2 class="mb-4"><i class="fas fa-edit me-2"></i>Modifier la réclamation</h2>
+                    
+                    <form method="post" enctype="multipart/form-data" id="claim-form">
+                        {% csrf_token %}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.title|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.claim_type|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.municipality|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.attachment|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        {{ form.description|as_crispy_field }}
+                        
+                        <div class="mb-4">
+                            <h5 class="mb-3"><i class="fas fa-map-marker-alt me-2"></i>Localisation</h5>
+                            <div id="map-container">
+                                <div id="map-loading">
+                                    <div class="spinner-border text-primary"></div>
+                                    <p class="mt-2">Chargement carte...</p>
+                                </div>
+                                <div id="map"></div>
+                            </div>
+                            <div class="d-flex justify-content-between mt-2">
+                                <button type="button" id="locate-btn" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-location-arrow me-1"></i>Ma position
+                                </button>
+                                <small class="text-muted">Cliquez sur la carte pour placer le marqueur</small>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    {{ form.location_lat|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.location_lng|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end mt-4">
+                            <a href="{% url 'citizen_dashboard' %}" class="btn btn-secondary me-2">
+                                <i class="fas fa-times me-1"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> Enregistrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialiser la carte
+            const latInput = document.getElementById('id_location_lat');
+            const lngInput = document.getElementById('id_location_lng');
+            
+            // Coordonnées existantes ou par défaut (Alger)
+            const initialLat = latInput.value ? parseFloat(latInput.value) : 36.7525;
+            const initialLng = lngInput.value ? parseFloat(lngInput.value) : 3.0420;
+            const zoomLevel = latInput.value ? 16 : 13;
+            
+            const map = L.map('map').setView([initialLat, initialLng], zoomLevel);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(map);
+            
+            const drawnItems = new L.FeatureGroup();
+            map.addLayer(drawnItems);
+            
+            // Ajouter marqueur existant si coordonnées disponibles
+            if (latInput.value && lngInput.value) {
+                const existingMarker = L.marker([initialLat, initialLng], {
+                    draggable: true
+                }).addTo(drawnItems);
+                
+                existingMarker.on('dragend', function(e) {
+                    const newPos = e.target.getLatLng();
+                    latInput.value = newPos.lat.toFixed(6);
+                    lngInput.value = newPos.lng.toFixed(6);
+                });
+            }
+            
+            // Activer le dessin de marqueurs
+            const drawControl = new L.Control.Draw({
+                draw: {
+                    marker: true,
+                    polyline: false,
+                    polygon: false,
+                    circle: false,
+                    rectangle: false
+                },
+                edit: {
+                    featureGroup: drawnItems
+                }
+            });
+            map.addControl(drawControl);
+            
+            // Gérer création de nouveaux marqueurs
+            map.on(L.Draw.Event.CREATED, function(e) {
+                drawnItems.clearLayers();
+                const layer = e.layer;
+                drawnItems.addLayer(layer);
+                
+                const latlng = layer.getLatLng();
+                latInput.value = latlng.lat.toFixed(6);
+                lngInput.value = latlng.lng.toFixed(6);
+                
+                if (layer instanceof L.Marker) {
+                    layer.on('dragend', function(e) {
+                        const newPos = e.target.getLatLng();
+                        latInput.value = newPos.lat.toFixed(6);
+                        lngInput.value = newPos.lng.toFixed(6);
+                    });
+                }
+            });
+            
+            // Bouton de géolocalisation
+            document.getElementById('locate-btn').addEventListener('click', function() {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(function(pos) {
+                        const userLatLng = [pos.coords.latitude, pos.coords.longitude];
+                        drawnItems.clearLayers();
+                        const marker = L.marker(userLatLng, {
+                            draggable: true
+                        }).addTo(drawnItems);
+                        map.setView(userLatLng, 16);
+                        
+                        latInput.value = userLatLng[0].toFixed(6);
+                        lngInput.value = userLatLng[1].toFixed(6);
+                        
+                        marker.on('dragend', function(e) {
+                            const newPos = e.target.getLatLng();
+                            latInput.value = newPos.lat.toFixed(6);
+                            lngInput.value = newPos.lng.toFixed(6);
+                        });
+                    }, function(err) {
+                        alert("Erreur de géolocalisation: " + err.message);
+                    });
+                } else {
+                    alert("Géolocalisation non supportée par votre navigateur");
+                }
+            });
+            
+            // Masquer le loader
+            document.getElementById('map-loading').style.display = 'none';
+            
+            // Validation avant soumission
+            document.getElementById('claim-form').addEventListener('submit', function(e) {
+                if (!latInput.value || !lngInput.value) {
+                    e.preventDefault();
+                    alert("Veuillez sélectionner une position sur la carte");
+                    return false;
+                }
+                return true;
+            });
+        });
+    </script>
+</body>
+</html>

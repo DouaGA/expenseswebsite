@@ -17,13 +17,14 @@ class Wilaya(models.Model):
 class Municipality(models.Model):
     name = models.CharField(max_length=100)
     postal_code = models.CharField(max_length=10, unique=True)
+    wilaya = models.ForeignKey(Wilaya, on_delete=models.PROTECT, null=True, blank=True)
+    delegation = models.CharField(max_length=100, blank=True, null=True)
     
     def __str__(self):
         return f"{self.name} ({self.postal_code})"
-
 class ClaimType(models.Model):
     name = models.CharField(max_length=100)
-    code = models.CharField(max_length=20)
+    code = models.CharField(max_length=20, unique=True)  # Ajoutez ce champ
     is_active = models.BooleanField(default=True)
     
     def __str__(self):
@@ -49,7 +50,8 @@ class Claim(models.Model):
     location_lat = models.FloatField()
     location_lng = models.FloatField()
     attachment = models.FileField(upload_to='claims/', null=True, blank=True)
-    
+    claim_type = models.ForeignKey(ClaimType, on_delete=models.CASCADE)  # Plus nullable
+
     def __str__(self):
         return f"{self.title} ({self.get_status_display()})"
 

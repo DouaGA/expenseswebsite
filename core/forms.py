@@ -1,17 +1,21 @@
 from django.contrib.auth import get_user_model
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import CodePostale, Citoyen, Agent, Claim, Municipality
+from .models import ClaimType, CodePostale, Citoyen, Agent, Claim, Municipality
 
 User = get_user_model()
 
 class ClaimForm(forms.ModelForm):
     class Meta:
         model = Claim
-        fields = ['title', 'description', 'municipality', 'attachment', 'location_lat', 'location_lng']
+        fields = ['title', 'claim_type', 'description', 'municipality', 'attachment', 'location_lat', 'location_lng']
         widgets = {
             'location_lat': forms.HiddenInput(),
             'location_lng': forms.HiddenInput(),
+            'claim_type': forms.Select(attrs={'class': 'form-select'}),
+        }
+        labels = {
+            'claim_type': "Type de réclamation"
         }
 
 class CitoyenRegisterForm(forms.Form):

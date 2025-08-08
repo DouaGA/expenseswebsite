@@ -4,13 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Tableau de Bord Citoyen{% endblock %}</title>
+    <title>Tableau de Bord Citoyen</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* Base Styles */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f8f9fa;
@@ -29,7 +30,6 @@
             margin-bottom: 20px;
         }
 
-        /* Stats Cards */
         .stat-card {
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             border-radius: 8px;
@@ -40,23 +40,11 @@
             box-shadow: 0 10px 20px rgba(0,0,0,0.1);
         }
 
-        .border-left-primary {
-            border-left: 4px solid #4e73df;
-        }
+        .border-left-primary { border-left: 4px solid #4e73df; }
+        .border-left-success { border-left: 4px solid #1cc88a; }
+        .border-left-warning { border-left: 4px solid #f6c23e; }
+        .border-left-danger { border-left: 4px solid #e74a3b; }
 
-        .border-left-success {
-            border-left: 4px solid #1cc88a;
-        }
-
-        .border-left-warning {
-            border-left: 4px solid #f6c23e;
-        }
-
-        .border-left-danger {
-            border-left: 4px solid #e74a3b;
-        }
-
-        /* Tabs */
         .nav-tabs .nav-link {
             color: #6c757d;
             border: none;
@@ -70,18 +58,12 @@
             border-bottom: 3px solid #4e73df;
         }
 
-        /* Tables */
-        .table {
-            margin-bottom: 0;
-        }
-
         .table thead th {
             border-top: none;
             font-weight: 600;
             color: #4e73df;
         }
 
-        /* Empty State */
         .empty-state {
             text-align: center;
             padding: 40px 20px;
@@ -92,7 +74,6 @@
             color: #d1d3e2;
         }
 
-        /* Map */
         #claimsMap {
             height: 500px;
             width: 100%;
@@ -101,7 +82,6 @@
             min-height: 300px;
         }
 
-        /* Floating Button */
         .btn-floating {
             position: fixed;
             bottom: 30px;
@@ -117,7 +97,6 @@
             z-index: 1000;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
             .dashboard-header {
                 padding: 10px 0;
@@ -131,6 +110,16 @@
                 padding: 8px 12px;
                 font-size: 14px;
             }
+
+            #claimsMap {
+                height: 300px;
+            }
+        }
+
+        /* Ajout pour les badges de statut */
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 0.35em 0.65em;
         }
     </style>
 </head>
@@ -270,10 +259,10 @@
                                     <table class="table table-hover">
                                         <thead>
                                             <tr>
-                                                <th>#</th>
                                                 <th>Titre</th>
                                                 <th>Type</th>
                                                 <th>Date</th>
+                                                <th>Statut</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -284,12 +273,13 @@
                                                 <td>{{ claim.title }}</td>
                                                 <td>{{ claim.claim_type.name|default:"-" }}</td>
                                                 <td>{{ claim.created_at|date:"d/m/Y H:i" }}</td>
+                                                <td><span class="badge bg-warning text-dark status-badge">En attente</span></td>
                                                 <td>
                                                     <div class="btn-group" role="group">
-                                                        <a href="{% url 'core:citizen_claim_detail' claim.id %}" class="btn btn-sm btn-info" title="Détails">
+                                                        <a href="{% url 'citizen_claim_detail' claim.id %}" class="btn btn-sm btn-info" title="Détails">
                                                             <i class="fas fa-eye"></i>
                                                         </a>
-                                                        <a href="{% url 'core:edit_claim' claim.id %}" class="btn btn-sm btn-warning" title="Modifier">
+                                                        <a href="{% url 'edit_claim' claim.id %}" class="btn btn-sm btn-warning" title="Modifier">
                                                             <i class="fas fa-edit"></i>
                                                         </a>
                                                         <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ claim.id }}" title="Supprimer">
@@ -312,7 +302,7 @@
                                                                 </div>
                                                                 <div class="modal-footer">
                                                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                                                                    <form action="{% url 'core:delete_claim' claim.id %}" method="POST">
+                                                                    <form action="{% url 'delete_claim' claim.id %}" method="POST">
                                                                         {% csrf_token %}
                                                                         <button type="submit" class="btn btn-danger">
                                                                             <i class="fas fa-trash me-1"></i> Supprimer
@@ -364,6 +354,7 @@
                                                 <th>Type</th>
                                                 <th>Date Soumission</th>
                                                 <th>Date Traitement</th>
+                                                <th>Statut</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -375,6 +366,7 @@
                                                 <td>{{ claim.claim_type.name|default:"-" }}</td>
                                                 <td>{{ claim.created_at|date:"d/m/Y H:i" }}</td>
                                                 <td>{{ claim.updated_at|date:"d/m/Y H:i" }}</td>
+                                                <td><span class="badge bg-success status-badge">Acceptée</span></td>
                                                 <td>
                                                     <a href="{% url 'core:citizen_claim_detail' claim.id %}" class="btn btn-sm btn-info" title="Détails">
                                                         <i class="fas fa-eye"></i>
@@ -412,6 +404,7 @@
                                                 <th>Type</th>
                                                 <th>Date Soumission</th>
                                                 <th>Date Rejet</th>
+                                                <th>Statut</th>
                                                 <th>Motif</th>
                                                 <th>Actions</th>
                                             </tr>
@@ -424,6 +417,7 @@
                                                 <td>{{ claim.claim_type.name|default:"-" }}</td>
                                                 <td>{{ claim.created_at|date:"d/m/Y H:i" }}</td>
                                                 <td>{{ claim.updated_at|date:"d/m/Y H:i" }}</td>
+                                                <td><span class="badge bg-danger status-badge">Rejetée</span></td>
                                                 <td>{{ claim.rejection_reason|default:"Aucun motif fourni" }}</td>
                                                 <td>
                                                     <a href="{% url 'core:citizen_claim_detail' claim.id %}" class="btn btn-sm btn-info" title="Détails">
@@ -490,11 +484,10 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Vérifier si l'élément map existe avant de l'initialiser
-        const mapElement = document.getElementById('claimsMap');
-        if (!mapElement) return;
+    // Variables globales pour la carte
+    let map, pendingLayer, acceptedLayer, rejectedLayer;
 
+    document.addEventListener('DOMContentLoaded', function() {
         // Initialiser la carte seulement quand l'onglet est actif
         document.getElementById('map-tab').addEventListener('shown.bs.tab', function() {
             initMap();
@@ -510,19 +503,23 @@
         const mapElement = document.getElementById('claimsMap');
         if (!mapElement) return;
 
-        // Vider le conteneur au cas où
-        mapElement.innerHTML = '';
-        
-        const map = L.map('claimsMap').setView([36.7525, 3.042], 12);
+        // Si la carte existe déjà, juste la rafraîchir
+        if (map) {
+            map.invalidateSize();
+            return;
+        }
+
+        // Initialiser la carte
+        map = L.map('claimsMap').setView([36.7525, 3.042], 12);
         
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(map);
 
         // Créer les groupes de marqueurs
-        const pendingLayer = L.layerGroup();
-        const acceptedLayer = L.layerGroup();
-        const rejectedLayer = L.layerGroup();
+        pendingLayer = L.layerGroup();
+        acceptedLayer = L.layerGroup();
+        rejectedLayer = L.layerGroup();
 
         // Variables pour suivre si nous avons des marqueurs
         let hasMarkers = false;
@@ -544,7 +541,7 @@
                     <b>{{ claim.title }}</b><br>
                     <small>Type: {{ claim.claim_type.name|default:"-" }}</small><br>
                     <small>Statut: En attente</small><br>
-                    <a href="{% url 'core:citizen_claim_detail' claim.id %}" class="btn btn-sm btn-primary mt-2">
+                    <a href="{% url 'citizen_claim_detail' claim.id %}" class="btn btn-sm btn-primary mt-2">
                         <i class="fas fa-eye me-1"></i> Détails
                     </a>
                 `);
@@ -631,6 +628,6 @@
             `;
         }
     }
-</script>
+    </script>
 </body>
 </html>

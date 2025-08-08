@@ -1,68 +1,57 @@
 from django.core.management.base import BaseCommand
-from core.models import PostalCode, Municipality, Wilaya
+from core.models import CodePostale, Municipality, Wilaya
 import json
 from pathlib import Path
-import os
 
 class Command(BaseCommand):
     help = 'Importe les codes postaux et municipalités'
 
     def handle(self, *args, **options):
-        # Chemin absolu vérifié
-        base_dir = Path(__file__).resolve().parent.parent.parent.parent
-        json_path = base_dir / 'core' / 'templates' / 'core' / 'data' / 'zip-postcodes.json'
+        json_path = Path('core/templates/core/data/zip-postcodes.json')
         
-        self.stdout.write(f"Chemin utilisé : {json_path}")
-
-        # Vérification explicite du fichier
-        if not json_path.exists():
-            self.stdout.write(self.style.ERROR("\nFichier introuvable !"))
-            self.stdout.write("Structure trouvée dans le projet :")
-            for f in base_dir.glob('**/*.json'):
-                self.stdout.write(f"→ {f}")
-            return
-
         try:
             with open(json_path, 'r', encoding='utf-8') as f:
                 postal_data = json.load(f)
                 
             created_count = 0
+            updated_count = 0
             
             for item in postal_data:
-                # Création Wilaya
+                # Nettoyage des données
+                gov_name = item['Gov'].strip()
+                deleg_name = item['Deleg'].strip()
+                cite_name = item['Cite'].strip()
+                zip_code = item['zip'].strip()
+                mun_name = ' '.join(cite_name.split('-')[0].strip().split())
+                
+                # Gestion de la Wilaya
                 wilaya, _ = Wilaya.objects.get_or_create(
-                    name=item['Gov'],
-                    defaults={'code': item['zip'][:2]}
+                    name=gov_name,
+                    defaults={'code': zip_code[:2]}
                 )
                 
-                # Nettoyage nom municipalité
-                mun_name = ' '.join(item['Cite'].split('-')[0].strip().split())
-                
-                # Création PostalCode
-                postal_code, pc_created = PostalCode.objects.get_or_create(
-                    zip_code=item['zip'],
+                # Gestion de la Municipalité
+                mun, created = Municipality.objects.update_or_create(
+                    postal_code=zip_code,
                     defaults={
-                        'gov': item['Gov'],
-                        'deleg': item['Deleg'],
-                        'cite': item['Cite']
+                        'name': mun_name,
+                        'wilaya': wilaya,
+                        'delegation': deleg_name
                     }
                 )
                 
-                # Création Municipality
-                mun, mun_created = Municipality.objects.get_or_create(
-                    name=mun_name,
-                    postal_code=item['zip'],
-                    defaults={'wilaya': wilaya}
-                )
-                
-                if mun_created:
+                if created:
                     created_count += 1
-                    self.stdout.write(f"+ {mun_name} ({item['zip']})")
+                    self.stdout.write(f"+ {mun_name} ({zip_code})")
+                else:
+                    updated_count += 1
+                    self.stdout.write(f"✓ {mun_name} ({zip_code}) mis à jour")
 
-            self.stdout.write(self.style.SUCCESS(f"\nImportation réussie ! {created_count} nouvelles municipalités créées."))
-            self.stdout.write(f"Total Municipalités: {Municipality.objects.count()}")
-            self.stdout.write(f"Total Codes Postaux: {PostalCode.objects.count()}")
+            self.stdout.write(self.style.SUCCESS(
+                f"\nImportation terminée : {created_count} créations, {updated_count} mises à jour"
+            ))
 
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"\nERREUR : {str(e)}"))
-            self.stdout.write("Vérifiez le format du fichier JSON !")
+            import traceback
+            traceback.print_exc()

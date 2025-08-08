@@ -2,13 +2,21 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Créer un compte - GreenMap</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500&display=swap" rel="stylesheet" />
-
+  <meta charset="UTF-8">
+  <title>Créer un compte Citoyen - CityCare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --primary-color: #2ecc71;
+      --secondary-color: #27ae60;
+      --text-color: #2c3e50;
+      --light-gray: #f8f9fa;
+      --border-color: #dfe6e9;
+      --error-color: #e74c3c;
+    }
+
     body {
-      background-color: #f4f4f4;
+      background: var(--light-gray);
       font-family: 'Poppins', sans-serif;
       display: flex;
       justify-content: center;
@@ -16,165 +24,217 @@
       min-height: 100vh;
       margin: 0;
       padding: 20px;
+      background-image: radial-gradient(circle at 10% 20%, rgba(46, 204, 113, 0.1) 0%, rgba(255,255,255,1) 90%);
     }
 
-    form {
-      background-color: #ffffff;
-      padding: 30px 40px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    .signup-container {
+      background-color: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
       width: 100%;
-      max-width: 400px;
+      max-width: 450px;
       box-sizing: border-box;
+      text-align: left;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .signup-container:hover {
+      box-shadow: 0 15px 35px rgba(0,0,0,0.12);
     }
 
     h2 {
       text-align: center;
-      margin-bottom: 25px;
-      color: #16610E;
+      margin-bottom: 30px;
+      color: var(--primary-color);
       font-weight: 600;
-      font-size: 1.8rem;
+      font-size: 28px;
+      position: relative;
+    }
+
+    h2::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 50px;
+      height: 3px;
+      background: var(--primary-color);
+      border-radius: 3px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+      position: relative;
     }
 
     label {
       display: block;
-      margin-bottom: 5px;
+      margin-bottom: 8px;
       font-weight: 500;
-      color: #333;
-      font-size: 0.9rem;
+      color: var(--text-color);
+      font-size: 14px;
     }
 
-    input {
+    .optional {
+      color: #7f8c8d;
+      font-weight: normal;
+      font-size: 0.8em;
+      margin-left: 5px;
+    }
+
+    input, select {
       width: 100%;
-      padding: 10px;
-      margin-bottom: 15px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 1rem;
-      font-family: inherit;
-      transition: border-color 0.3s ease;
+      padding: 12px 15px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 15px;
       box-sizing: border-box;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      font-family: 'Poppins', sans-serif;
     }
 
-    input:focus {
-      border-color: #16610E;
+    input:focus, select:focus {
       outline: none;
-      box-shadow: 0 0 5px rgba(22, 97, 14, 0.5);
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.2);
     }
 
     button {
       width: 100%;
-      padding: 12px;
-      background-color: #16610E;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
       color: white;
       border: none;
-      border-radius: 5px;
-      font-weight: bold;
-      font-size: 1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 16px;
       cursor: pointer;
-      transition: background-color 0.3s ease;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      margin-top: 10px;
     }
 
     button:hover {
-      background-color: #14550c;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
     }
 
     .login-link {
-      margin-top: 15px;
+      margin-top: 25px;
       text-align: center;
-      font-size: 0.9rem;
+      font-size: 14px;
+      color: #7f8c8d;
     }
 
     .login-link a {
-      color: #16610E;
+      color: var(--primary-color);
       text-decoration: none;
-      font-weight: 600;
+      font-weight: 500;
+      transition: color 0.3s ease;
     }
 
     .login-link a:hover {
+      color: var(--secondary-color);
       text-decoration: underline;
     }
 
-    /* Messages d’erreur */
-    .error-message {
-      color: #d93025;
-      font-size: 0.85rem;
-      margin-top: -10px;
-      margin-bottom: 10px;
+    /* Animation pour le container */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .signup-container {
+      animation: fadeIn 0.5s ease-out forwards;
     }
 
     /* Responsive */
     @media (max-width: 480px) {
-      form {
-        padding: 25px 20px;
+      .signup-container {
+        padding: 30px 20px;
       }
+
       h2 {
-        font-size: 1.5rem;
-      }
-      input {
-        font-size: 0.95rem;
-        padding: 8px;
-      }
-      button {
-        font-size: 0.95rem;
-        padding: 10px;
+        font-size: 24px;
       }
     }
   </style>
 </head>
 <body>
+  <div class="signup-container">
+    <h2>Créer un compte Citoyen</h2>
 
-  <form action="" method="post" novalidate>
-    {% csrf_token %}
-    <h2>Créer un compte citoyen</h2>
+    <form method="post" action="" novalidate>
+      {% csrf_token %}
 
-    <!-- Erreurs globales -->
-    {% if form.non_field_errors %}
-      <div class="error-message">{{ form.non_field_errors }}</div>
-    {% endif %}
+      {% if form.non_field_errors %}
+        <div class="error-message" style="display: block; margin-bottom: 20px;">{{ form.non_field_errors }}</div>
+      {% endif %}
 
-    <label for="{{ form.nom.id_for_label }}">{{ form.nom.label }}</label>
-    {{ form.nom }}
-    {% if form.nom.errors %}
-      <div class="error-message">{{ form.nom.errors }}</div>
-    {% endif %}
+      <div class="form-group">
+        <label for="{{ form.nom.id_for_label }}">{{ form.nom.label }}</label>
+        {{ form.nom }}
+        {% if form.nom.errors %}
+          <div class="error-message" style="display: block;">{{ form.nom.errors }}</div>
+        {% endif %}
+      </div>
 
-    <label for="{{ form.prenom.id_for_label }}">{{ form.prenom.label }}</label>
-    {{ form.prenom }}
-    {% if form.prenom.errors %}
-      <div class="error-message">{{ form.prenom.errors }}</div>
-    {% endif %}
+      <div class="form-group">
+        <label for="{{ form.prenom.id_for_label }}">{{ form.prenom.label }}</label>
+        {{ form.prenom }}
+        {% if form.prenom.errors %}
+          <div class="error-message" style="display: block;">{{ form.prenom.errors }}</div>
+        {% endif %}
+      </div>
 
-    <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
-    {{ form.username }}
-    {% if form.username.errors %}
-      <div class="error-message">{{ form.username.errors }}</div>
-    {% endif %}
+      <div class="form-group">
+        <label for="municipalite">Municipalité <span class="optional">(optionnel)</span></label>
+        <input type="text" name="municipalite" id="municipalite" placeholder="Votre municipalité">
+      </div>
 
-    <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
-    {{ form.email }}
-    {% if form.email.errors %}
-      <div class="error-message">{{ form.email.errors }}</div>
-    {% endif %}
+      <div class="form-group">
+        <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+        {{ form.username }}
+        {% if form.username.errors %}
+          <div class="error-message" style="display: block;">{{ form.username.errors }}</div>
+        {% endif %}
+      </div>
 
-    <label for="{{ form.password1.id_for_label }}">{{ form.password1.label }}</label>
-    {{ form.password1 }}
-    {% if form.password1.errors %}
-      <div class="error-message">{{ form.password1.errors }}</div>
-    {% endif %}
+      <div class="form-group">
+        <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+        {{ form.email }}
+        {% if form.email.errors %}
+          <div class="error-message" style="display: block;">{{ form.email.errors }}</div>
+        {% endif %}
+      </div>
 
-    <label for="{{ form.password2.id_for_label }}">{{ form.password2.label }}</label>
-    {{ form.password2 }}
-    {% if form.password2.errors %}
-      <div class="error-message">{{ form.password2.errors }}</div>
-    {% endif %}
+      <div class="form-group">
+        <label for="{{ form.password1.id_for_label }}">{{ form.password1.label }}</label>
+        {{ form.password1 }}
+        {% if form.password1.errors %}
+          <div class="error-message" style="display: block;">{{ form.password1.errors }}</div>
+        {% endif %}
+      </div>
 
-    <button type="submit">Créer le compte</button>
+      <div class="form-group">
+        <label for="{{ form.password2.id_for_label }}">{{ form.password2.label }}</label>
+        {{ form.password2 }}
+        {% if form.password2.errors %}
+          <div class="error-message" style="display: block;">{{ form.password2.errors }}</div>
+        {% endif %}
+      </div>
 
-    <div class="login-link">
-      Vous avez déjà un compte ? <a href="{% url 'login_citoyen' %}">Se connecter</a>
-    </div>
-  </form>
+      <button type="submit">Créer le compte</button>
 
+      <div class="login-link">
+        Vous avez déjà un compte ? <a href="{% url 'login_citoyen' %}">Se connecter</a>
+      </div>
+    </form>
+  </div>
 </body>
 </html>

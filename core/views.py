@@ -74,8 +74,7 @@ def signup_citoyen(request):
             form.save()
             return redirect('login_citoyen')
     else:
-        form = CitoyenRegisterForm(request.POST)
-
+        form = CitoyenRegisterForm()
     return render(request, 'core/signup_citoyen.html', {'form': form})
 
 def signup_agent(request):
@@ -88,15 +87,6 @@ def signup_agent(request):
         form = AgentRegisterForm()
     return render(request, 'core/signup_agent.html', {'form': form})
 
-@login_required
-def citizen_dashboard(request):
-    claims = request.user.claims.all()
-    context = {
-        'pending_claims': claims.filter(status=Claim.PENDING),
-        'accepted_claims': claims.filter(status=Claim.ACCEPTED),
-        'rejected_claims': claims.filter(status=Claim.REJECTED),
-    }
-    return render(request, 'core/citizen_dashboard.html', context)
 
 @login_required
 def agent_dashboard(request):
@@ -116,8 +106,15 @@ class LogoutView(View):
 
 @login_required
 def claims_list(request):
-
-    claims = Claim.objects.all().order_by('-created_at')
+    # Pour les citoyens, ne montrer que leurs propres réclamations
+    if hasattr(request.user, 'citoyen'):
+        claims = Claim.objects.filter(created_by=request.user).order_by('-created_at')
+    # Pour les agents, montrer toutes les réclamations
+    elif hasattr(request.user, 'agent'):
+        claims = Claim.objects.all().order_by('-created_at')
+    else:
+        claims = Claim.objects.none()  # Si ni citoyen ni agent
+    
     status_filter = request.GET.get('status', 'all')
     if status_filter != 'all':
         claims = claims.filter(status=status_filter)
@@ -130,12 +127,30 @@ def claims_list(request):
         'municipalities': municipalities
     })
 
+@login_required
 def agent_claim_detail(request, pk):
     claim = get_object_or_404(Claim, pk=pk)
-    if not request.user.user_type == 'agent':
-        raise PermissionDenied 
-    return render(request, 'core/agent_claim_detail.html', {'claim': claim})
+    
+    # Vérification plus stricte du rôle agent
+    if not hasattr(request.user, 'agent'):
+        raise PermissionDenied("Accès réservé aux agents municipaux")
+    
+    # Gestion du changement de statut
+    if request.method == 'POST' and 'status' in request.POST:
+        new_status = request.POST['status']
+        if new_status in [Claim.PENDING, Claim.ACCEPTED, Claim.REJECTED]:
+            claim.status = new_status
+            claim.updated_at = timezone.now()
+            claim.save()
+            messages.success(request, f"Statut mis à jour: {claim.get_status_display()}")
+            return redirect('agent_claim_detail', pk=pk)
+    
+    return render(request, 'core/agent_claim_detail.html', {
+        'claim': claim,
+        'now': timezone.now()  # Utile pour les calculs de durée
+    })
 
+@login_required
 def citizen_claim_detail(request, pk):
     claim = get_object_or_404(Claim, pk=pk)
     if claim.created_by != request.user:
@@ -201,6 +216,7 @@ def export_claims(request):
     
     return HttpResponse('Invalid request', status=400)
 
+
 @login_required
 def create_claim(request):
     if request.method == 'POST':
@@ -208,19 +224,42 @@ def create_claim(request):
         if form.is_valid():
             claim = form.save(commit=False)
             claim.created_by = request.user
+            claim.status = Claim.PENDING
             claim.save()
+            messages.success(request, "Réclamation créée avec succès!")
             return redirect('citizen_dashboard')
+        else:
+            # Affichez les erreurs spécifiques
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
     else:
         form = ClaimForm()
-    
+
     return render(request, 'core/create_claim.html', {
         'form': form,
-        'municipalities': Municipality.objects.all()
+        'municipalities': Municipality.objects.all(),
+        'claim_types': ClaimType.objects.filter(is_active=True),  # Seulement les types actifs
     })
+
+
+@login_required
+def citizen_dashboard(request):
+    # Récupérer toutes les réclamations de l'utilisateur connecté
+    claims = request.user.claims.all().order_by('-created_at')
+    
+    # Séparer par statut pour les différents onglets
+    context = {
+        'pending_claims': claims.filter(status=Claim.PENDING),
+        'accepted_claims': claims.filter(status=Claim.ACCEPTED),
+        'rejected_claims': claims.filter(status=Claim.REJECTED),
+    }
+    return render(request, 'core/citizen_dashboard.html', context)
+
+
 
 @login_required
 def profile_view(request):
-    # Get or create the user's profile
     profile, created = Profile.objects.get_or_create(user=request.user)
     
     edit_mode = request.GET.get('edit', False)
@@ -245,9 +284,9 @@ def profile_view(request):
         'user': request.user,
         'municipalities': municipalities
     })
+
 @login_required
 def edit_profile(request):
-    # Get or create the user's profile
     profile, created = Profile.objects.get_or_create(user=request.user)
     municipalities = Municipality.objects.all()
     
@@ -364,7 +403,7 @@ def edit_claim(request, pk):
     else:
         form = ClaimForm(instance=claim)
     
-    return render(request, 'core/edit_claim.html', {
+    return render(request, 'core/edit_claim.html', {  # Chemin correct
         'form': form,
         'claim': claim,
         'municipalities': Municipality.objects.all()

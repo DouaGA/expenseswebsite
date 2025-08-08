@@ -3,83 +3,108 @@
 <head>
   <meta charset="UTF-8">
   <title>Choix du profil - GreenMap</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Responsive viewport -->
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
-      background-color: #16610E;
+      background: #f8f9fa;
       font-family: 'Poppins', sans-serif;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      min-height: 100vh;
       margin: 0;
       padding: 20px;
     }
 
     .container {
       text-align: center;
-      color: #FFF4A4;
       width: 100%;
-      max-width: 600px;
+      max-width: 500px;
     }
 
     .title {
       font-size: 28px;
-      margin-bottom: 40px;
-      color: #FED16A;
+      margin-bottom: 50px;
+      color: #2c3e50;
+      font-weight: 600;
     }
 
-    .roles {
+    .btn-group {
       display: flex;
-      justify-content: center;
-      gap: 40px;
-      flex-wrap: wrap; /* Permet de passer à la ligne sur petits écrans */
+      flex-direction: column;
+      gap: 20px;
     }
 
-    .role-circle {
-      width: 150px;
-      height: 150px;
-      border-radius: 50%;
-      background-color: rgba(255, 255, 255, 0.1);
-      border: 4px solid #FFF4A4;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 20px;
-      color: #FFF4A4;
+    .profile-btn {
+      padding: 16px 0;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: 600;
       cursor: pointer;
       text-decoration: none;
       transition: all 0.3s ease;
+      border: none;
+      width: 100%;
+      max-width: 300px;
+      margin: 0 auto;
+      display: block;
+      color: white;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      position: relative;
+      overflow: hidden;
     }
 
-    .role-circle:hover {
-      background-color: rgba(255, 255, 255, 0.2);
-      box-shadow: 0 0 20px rgba(255, 244, 164, 0.4);
+    .profile-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: 0.5s;
     }
 
-    /* ✅ Responsive pour petits écrans */
-    @media (max-width: 500px) {
-      .roles {
-        flex-direction: column;
-        align-items: center;
-        gap: 20px;
+    .profile-btn:hover::before {
+      left: 100%;
+    }
+
+    .agent-btn {
+      background: #3498db;
+    }
+
+    .citizen-btn {
+      background: #2ecc71;
+    }
+
+    .profile-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+
+    .profile-btn:active {
+      transform: translateY(0);
+    }
+
+    @media (min-width: 768px) {
+      .btn-group {
+        flex-direction: row;
+        justify-content: center;
       }
-
-      .role-circle {
-        width: 140px;
-        height: 140px;
-        font-size: 18px;
+      
+      .profile-btn {
+        width: 200px;
       }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="title">Choisissez votre profil</div>
-    <div class="roles">
-      <a href="{% url 'login_agent' %}" class="role-circle">Agent</a>
-      <a href="{% url 'login_citoyen' %}" class="role-circle">Citoyen</a>
+    <h1 class="title">Choisissez votre profil</h1>
+    <div class="btn-group">
+      <a href="{% url 'login_agent' %}" class="profile-btn agent-btn">Agent</a>
+      <a href="{% url 'login_citoyen' %}" class="profile-btn citizen-btn">Citoyen</a>
     </div>
   </div>
 </body>

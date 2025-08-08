@@ -2,116 +2,201 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Connexion Agent - GreenMap</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Rendu responsive -->
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500&display=swap" rel="stylesheet">
+  <title>Connexion Agent - CityCare</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --primary-color: #3498db;
+      --secondary-color: #2980b9;
+      --text-color: #2c3e50;
+      --light-gray: #f8f9fa;
+      --border-color: #dfe6e9;
+      --error-color: #e74c3c;
+    }
+
     body {
-      background-color: #f4f4f4;
+      background: var(--light-gray);
       font-family: 'Poppins', sans-serif;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      min-height: 100vh;
       margin: 0;
-      padding: 20px; /* empêche les débordements sur petits écrans */
+      padding: 20px;
+      background-image: radial-gradient(circle at 10% 20%, rgba(52, 152, 219, 0.1) 0%, rgba(255,255,255,1) 90%);
     }
 
     .login-container {
       background-color: white;
-      padding: 30px 40px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
       width: 100%;
-      max-width: 350px; /* largeur maximale */
+      max-width: 400px;
       box-sizing: border-box;
       text-align: left;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .login-container:hover {
+      box-shadow: 0 15px 35px rgba(0,0,0,0.12);
     }
 
     h2 {
       text-align: center;
-      margin-bottom: 25px;
-      color: #16610E;
+      margin-bottom: 30px;
+      color: var(--primary-color);
+      font-weight: 600;
+      font-size: 28px;
+      position: relative;
+    }
+
+    h2::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 50px;
+      height: 3px;
+      background: var(--primary-color);
+      border-radius: 3px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+      position: relative;
     }
 
     label {
       display: block;
-      margin-bottom: 5px;
+      margin-bottom: 8px;
       font-weight: 500;
-      color: #333;
+      color: var(--text-color);
+      font-size: 14px;
     }
 
     input {
       width: 100%;
-      padding: 10px;
-      margin-bottom: 20px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 14px;
+      padding: 12px 15px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 15px;
+      box-sizing: border-box;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    }
+
+    input.error {
+      border-color: var(--error-color);
+    }
+
+    .error-message {
+      color: var(--error-color);
+      font-size: 12px;
+      margin-top: 5px;
+      display: none;
     }
 
     button {
       width: 100%;
-      padding: 12px;
-      background-color: #16610E;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
       color: white;
       border: none;
-      border-radius: 5px;
-      font-weight: bold;
-      font-size: 15px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 16px;
       cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      margin-top: 10px;
     }
 
     button:hover {
-      background-color: #14550c;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
     }
 
     .signup-link {
-      margin-top: 15px;
+      margin-top: 25px;
       text-align: center;
       font-size: 14px;
+      color: #7f8c8d;
     }
 
     .signup-link a {
-      color: #16610E;
+      color: var(--primary-color);
       text-decoration: none;
-      font-weight: bold;
+      font-weight: 500;
+      transition: color 0.3s ease;
     }
 
     .signup-link a:hover {
+      color: var(--secondary-color);
       text-decoration: underline;
     }
 
-    /* ✅ Adaptation aux très petits écrans (smartphones étroits) */
-    @media (max-width: 320px) {
+    .optional-tag {
+      font-size: 12px;
+      color: #7f8c8d;
+      font-weight: normal;
+      margin-left: 5px;
+    }
+
+    /* Animation pour le container */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .login-container {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
       .login-container {
-        padding: 20px;
+        padding: 30px 20px;
       }
 
       h2 {
-        font-size: 20px;
-      }
-
-      input,
-      button {
-        font-size: 13px;
+        font-size: 24px;
       }
     }
   </style>
 </head>
 <body>
-
   <div class="login-container">
     <h2>Connexion Agent</h2>
 
-    <form method="post" action="{% url 'login_agent' %}">
+    <form method="post" action="{% url 'login_agent' %}" id="loginForm">
       {% csrf_token %}
 
-      <label for="username">Nom d'utilisateur</label>
-      <input type="text" name="username" id="username" placeholder="Entrez votre nom d'utilisateur" required>
+      <div class="form-group">
+        <label for="username">Nom d'utilisateur</label>
+        <input type="text" name="username" id="username" placeholder="Entrez votre nom d'utilisateur" required>
+      </div>
 
-      <label for="password">Mot de passe</label>
-      <input type="password" name="password" id="password" placeholder="Entrez votre mot de passe" required>
+      <div class="form-group">
+        <label for="password">Mot de passe</label>
+        <input type="password" name="password" id="password" placeholder="Entrez votre mot de passe" required>
+      </div>
+
+      <div class="form-group">
+        <label for="vpn">Adresse VPN <span class="optional-tag">(optionnel)</span></label>
+        <input type="text" name="vpn" id="vpn" placeholder="XXX.XXX.XXX.XXX" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}">
+        <div class="error-message" id="vpn-error">Format VPN invalide (ex: 192.168.1.1)</div>
+      </div>
 
       <button type="submit">Se connecter</button>
     </form>
@@ -121,5 +206,33 @@
     </div>
   </div>
 
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      const vpnInput = document.getElementById('vpn');
+      const vpnError = document.getElementById('vpn-error');
+      
+      // Seulement valider si le champ VPN est rempli
+      if(vpnInput.value && !vpnInput.checkValidity()) {
+        e.preventDefault();
+        vpnInput.classList.add('error');
+        vpnError.style.display = 'block';
+      } else {
+        vpnInput.classList.remove('error');
+        vpnError.style.display = 'none';
+      }
+    });
+
+    // Validation en temps réel
+    document.getElementById('vpn').addEventListener('input', function() {
+      const vpnError = document.getElementById('vpn-error');
+      if(this.value && !this.checkValidity()) {
+        this.classList.add('error');
+        vpnError.style.display = 'block';
+      } else {
+        this.classList.remove('error');
+        vpnError.style.display = 'none';
+      }
+    });
+  </script>
 </body>
 </html>
