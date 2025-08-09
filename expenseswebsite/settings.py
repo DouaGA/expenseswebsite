@@ -75,6 +75,7 @@ INSTALLED_APPS = [
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 ROOT_URLCONF = 'expenseswebsite.urls'
+LOGOUT_REDIRECT_URL = 'home'
 
 LOGIN_URL = 'login'
 
@@ -92,7 +93,6 @@ MIDDLEWARE = [
 
 ]
 
-ROOT_URLCONF = 'expenseswebsite.urls'
 
 TEMPLATES = [
     {

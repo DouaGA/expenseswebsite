@@ -137,9 +137,12 @@
                         <a href="{% url 'create_claim' %}" class="btn btn-primary me-2">
                             <i class="fas fa-plus me-1"></i> Nouvelle Réclamation
                         </a>
-                        <a href="{% url 'logout' %}" class="btn btn-outline-danger">
-                            <i class="fas fa-sign-out-alt me-1"></i> Déconnexion
-                        </a>
+                        <form action="{% url 'logout' %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-sign-out-alt"></i> Déconnexion
+                            </button>
+                        </form>
                         {% else %}
                         <a href="{% url 'core:login_citoyen' %}" class="btn btn-primary me-2">
                             <i class="fas fa-sign-in-alt me-1"></i> Connexion
@@ -329,7 +332,7 @@
                                         <i class="fas fa-plus me-1"></i> Créer une réclamation
                                     </a>
                                     {% else %}
-                                    <a href="{% url 'core:login_citoyen' %}" class="btn btn-primary">
+                                    <a href="{% url 'login_citoyen' %}" class="btn btn-primary">
                                         <i class="fas fa-sign-in-alt me-1"></i> Se connecter
                                     </a>
                                     {% endif %}

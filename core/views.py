@@ -27,10 +27,16 @@ from .forms import ProfileForm
 def home(request):
     return render(request, 'core/home.html')
 
+from django.contrib.auth import logout as auth_logout
+
 def login_agent(request):
     if request.method == "POST":
         username = request.POST['username']
         password = request.POST['password']
+
+        # Déconnecter tout utilisateur citoyen
+        if hasattr(request.user, 'citoyen'):
+            auth_logout(request)
 
         user = authenticate(request, username=username, password=password)
 
@@ -51,9 +57,13 @@ def login_citoyen(request):
     if request.method == "POST":
         username = request.POST['username']
         password = request.POST['password']
-        
+
+        # Déconnecter tout utilisateur agent
+        if hasattr(request.user, 'agent'):
+            auth_logout(request)
+
         user = authenticate(request, username=username, password=password)
-        
+
         if user is not None:
             try:
                 citoyen = Citoyen.objects.get(user=user)
@@ -66,6 +76,7 @@ def login_citoyen(request):
             messages.error(request, "Nom d'utilisateur ou mot de passe incorrect.")
     
     return render(request, 'core/login_citoyen.html')
+
 
 def signup_citoyen(request):
     if request.method == 'POST':
@@ -87,23 +98,85 @@ def signup_agent(request):
         form = AgentRegisterForm()
     return render(request, 'core/signup_agent.html', {'form': form})
 
+def LogoutView(request):
+    auth_logout(request)  # Déconnecter l'utilisateur
+    return redirect('home')  # Rediriger vers la page d'accueil
+
+
+from django.db.models.functions import Cast
 
 @login_required
 def agent_dashboard(request):
     claims = Claim.objects.all()
+    
+    # Statistiques sur les utilisateurs actifs (7 derniers jours)
+    today = timezone.now().date()
+    seven_days_ago = today - timedelta(days=7)
+    
+    # Nombre d'utilisateurs uniques ayant créé des réclamations par jour
+    active_users_data = (
+        Claim.objects
+        .filter(created_at__date__gte=seven_days_ago)
+        .annotate(date=TruncDate('created_at'))
+        .values('date')
+        .annotate(
+            user_count=Count('created_by', distinct=True),
+            claim_count=Count('id')
+        )
+        .order_by('date')
+    )
+    
+    # Préparer les données pour le graphique
+    dates = []
+    user_counts = []
+    claim_counts = []
+    
+    for day in active_users_data:
+        dates.append(day['date'].strftime('%d/%m'))
+        user_counts.append(day['user_count'])
+        claim_counts.append(day['claim_count'])
+    
+    # Répartition par type de réclamation
+    claim_types = (
+        ClaimType.objects
+        .annotate(count=Count('claim'))
+        .order_by('-count')
+    )
+    type_labels = [t.name for t in claim_types]
+    type_counts = [t.count for t in claim_types]
+    
+    # Lieux les plus fréquents (groupés par coordonnées arrondies)
+    frequent_locations = (
+        Claim.objects
+        .exclude(location_lat__isnull=True)
+        .exclude(location_lng__isnull=True)
+        .annotate(
+            rounded_lat=Cast('location_lat', output_field=FloatField()),
+            rounded_lng=Cast('location_lng', output_field=FloatField())
+        )
+        .values('rounded_lat', 'rounded_lng')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:5]  # Top 5 des lieux les plus fréquents
+    )
+    
+    # Préparer les données pour le graphique de localisation
+    location_labels = [f"Lieu {i+1}" for i in range(len(frequent_locations))]
+    location_counts = [loc['count'] for loc in frequent_locations]
     
     context = {
         'total_claims': claims.count(),
         'pending_claims': claims.filter(status=Claim.PENDING),
         'accepted_claims': claims.filter(status=Claim.ACCEPTED),
         'rejected_claims': claims.filter(status=Claim.REJECTED),
+        'dates': json.dumps(dates),
+        'user_counts': json.dumps(user_counts),
+        'claim_counts': json.dumps(claim_counts),
+        'type_labels': json.dumps(type_labels),
+        'type_counts': json.dumps(type_counts),
+        'location_labels': json.dumps(location_labels),
+        'location_counts': json.dumps(location_counts),
     }
     return render(request, 'core/agent_dashboard.html', context)
-
-class LogoutView(View):
-    def get(self, request):
-        logout(request)
-        return redirect('home')
 
 @login_required
 def citizen_claim_detail(request, pk):
@@ -508,3 +581,19 @@ def api_claims(request):
         claims_data.append(claim_data)
     
     return JsonResponse(claims_data, safe=False)
+
+from django.db.models import Func, FloatField
+
+class Round(Func):
+    function = 'ROUND'
+    template = 'ROUND(CAST(%(expressions)s AS numeric), %(precision)s)'
+    
+    def __init__(self, expression, precision=0, **extra):
+        expressions = [expression, precision]
+        super().__init__(*expressions, output_field=FloatField(), **extra)
+    
+    def resolve_expression(self, *args, **kwargs):
+        # S'assure que la précision est traitée comme une valeur littérale
+        copy = self.copy()
+        copy.source_expressions[1] = copy.source_expressions[1].resolve_expression(*args, **kwargs)
+        return super(Round, copy).resolve_expression(*args, **kwargs)
