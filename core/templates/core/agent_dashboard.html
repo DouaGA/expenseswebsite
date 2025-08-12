@@ -1,593 +1,640 @@
 {% load static %}
-{% block title %}Tableau de bord Agent - CityCare{% endblock %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de Bord Agent - CityCare</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #1e5631;
+            --secondary-color: #4CAF50;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --sidebar-width: 250px;
+            --transition-speed: 0.3s;
+        }
 
-{% block extra_css %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-<style>
-    :root {
-        --primary-color: #1e5631;
-        --secondary-color: #4CAF50;
-        --danger-color: #dc3545;
-        --warning-color: #ffc107;
-        --info-color: #17a2b8;
-        --light-color: #f8f9fa;
-        --dark-color: #343a40;
-        --sidebar-width: 250px;
-        --transition-speed: 0.3s;
-    }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
 
-    body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background-color: #f5f5f5;
-        color: #333;
-        line-height: 1.6;
-        margin: 0;
-        padding: 0;
-    }
-
-    .main-container {
-        display: flex;
-        min-height: 100vh;
-    }
-    
-    .sidebar {
-        width: var(--sidebar-width);
-        height: 100vh;
-        background: var(--primary-color);
-        color: #ecf0f1;
-        position: fixed;
-        left: 0;
-        top: 0;
-        display: flex;
-        flex-direction: column;
-        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-        z-index: 1000;
-        transition: transform var(--transition-speed) ease;
-    }
-    
-    .main-content {
-        margin-left: var(--sidebar-width);
-        padding: 20px;
-        width: calc(100% - var(--sidebar-width));
-        transition: margin-left var(--transition-speed) ease, width var(--transition-speed) ease;
-    }
-    
-    .sidebar-header {
-        padding: 20px;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-    
-    .logo {
-        color: white;
-        font-weight: 700;
-        margin: 0;
-    }
-    
-    .sidebar-nav {
-        flex: 1;
-        overflow-y: auto;
-        padding: 10px 0;
-    }
-    
-    .sidebar-nav ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-    
-    .sidebar-nav li a {
-        display: block;
-        padding: 12px 20px;
-        color: rgba(255,255,255,0.8);
-        text-decoration: none;
-        transition: all 0.2s;
-    }
-    
-    .sidebar-nav li a:hover,
-    .sidebar-nav li a.active {
-        background-color: rgba(255,255,255,0.1);
-        color: white;
-    }
-    
-    .sidebar-nav li a i {
-        width: 20px;
-        margin-right: 10px;
-        text-align: center;
-    }
-    
-    .sidebar-footer {
-        padding: 15px 20px;
-        border-top: 1px solid rgba(255,255,255,0.1);
-    }
-    
-    .user-info {
-        display: flex;
-        align-items: center;
-        color: white;
-    }
-    
-    .user-info i {
-        margin-right: 10px;
-        font-size: 1.2rem;
-    }
-    
-    /* Styles pour les KPI en ligne */
-    .kpi-container {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-    
-    .kpi-card {
-        flex: 1;
-        min-width: 120px;
-        padding: 15px;
-        border-radius: 8px;
-        color: white;
-        text-align: center;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    
-    .kpi-card h3 {
-        margin: 0 0 5px 0;
-        font-size: 14px;
-        font-weight: 500;
-    }
-    
-    .kpi-card .value {
-        font-size: 24px;
-        font-weight: bold;
-        margin: 0;
-    }
-    
-    .kpi-pending {
-        background-color: var(--warning-color);
-    }
-    
-    .kpi-accepted {
-        background-color: var(--secondary-color);
-    }
-    
-    .kpi-rejected {
-        background-color: var(--danger-color);
-    }
-    
-    /* Styles pour les graphiques */
-    .chart-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
-        margin-bottom: 20px;
-    }
-    
-    .chart-container {
-        flex: 1;
-        min-width: 300px;
-        background: white;
-        border-radius: 8px;
-        padding: 15px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    
-    .chart-container h4 {
-        margin-top: 0;
-        margin-bottom: 15px;
-        font-size: 16px;
-        color: var(--dark-color);
-    }
-    
-    .chart-wrapper {
-        height: 250px;
-        position: relative;
-    }
-    
-    /* Styles pour la liste des réclamations */
-    .claims-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
-    }
-    
-    .claims-column {
-        flex: 1;
-        min-width: 300px;
-    }
-    
-    .claims-list {
-        background: white;
-        border-radius: 8px;
-        padding: 15px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    
-    .claims-list h4 {
-        margin-top: 0;
-        margin-bottom: 15px;
-        padding-bottom: 10px;
-        border-bottom: 1px solid #eee;
-    }
-    
-    .claim-item {
-        padding: 10px;
-        margin-bottom: 10px;
-        border-left: 4px solid;
-        background-color: #f9f9f9;
-        border-radius: 4px;
-    }
-    
-    .claim-item.pending {
-        border-left-color: var(--warning-color);
-    }
-    
-    .claim-item.accepted {
-        border-left-color: var(--secondary-color);
-    }
-    
-    .claim-item.rejected {
-        border-left-color: var(--danger-color);
-    }
-    
-    .claim-item h5 {
-        margin: 0 0 5px 0;
-        font-size: 14px;
-    }
-    
-    .claim-item p {
-        margin: 0 0 5px 0;
-        font-size: 12px;
-        color: #666;
-    }
-    
-    .claim-item .meta {
-        display: flex;
-        justify-content: space-between;
-        font-size: 12px;
-        color: #999;
-    }
-    
-    /* Responsive */
-    @media (max-width: 768px) {
+        .main-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: var(--primary-color);
+            color: #ecf0f1;
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            transition: transform var(--transition-speed) ease;
+        }
+        
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+            width: calc(100% - var(--sidebar-width));
+            transition: margin-left var(--transition-speed) ease, width var(--transition-speed) ease;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .logo {
+            color: white;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+        
+        .sidebar-nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .sidebar-nav li a {
+            display: block;
+            padding: 12px 20px;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        
+        .sidebar-nav li a:hover,
+        .sidebar-nav li a.active {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+        }
+        
+        .sidebar-nav li a i {
+            width: 20px;
+            margin-right: 10px;
+            text-align: center;
+        }
+        
+        .sidebar-footer {
+            padding: 15px 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            color: white;
+        }
+        
+        .user-info i {
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+        
+        /* Styles pour les KPI en ligne */
+        .kpi-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
         .kpi-card {
-            min-width: 100%;
+            flex: 1;
+            min-width: 120px;
+            padding: 15px;
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .kpi-card h3 {
+            margin: 0 0 5px 0;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .kpi-card .value {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .kpi-pending {
+            background-color: var(--warning-color);
+        }
+        
+        .kpi-accepted {
+            background-color: var(--secondary-color);
+        }
+        
+        .kpi-rejected {
+            background-color: var(--danger-color);
+        }
+        
+        /* Styles pour les graphiques */
+        .chart-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 20px;
         }
         
         .chart-container {
-            min-width: 100%;
+            flex: 1;
+            min-width: 300px;
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .chart-container h4 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 16px;
+            color: var(--dark-color);
+        }
+        
+        .chart-wrapper {
+            height: 250px;
+            position: relative;
+        }
+        
+        /* Styles pour la liste des réclamations */
+        .claims-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
         }
         
         .claims-column {
-            min-width: 100%;
+            flex: 1;
+            min-width: 300px;
         }
-    }
-</style>
-{% endblock %}
+        
+        .claims-list {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .claims-list h4 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .claim-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        
+        .claim-item.pending {
+            border-left-color: var(--warning-color);
+        }
+        
+        .claim-item.accepted {
+            border-left-color: var(--secondary-color);
+        }
+        
+        .claim-item.rejected {
+            border-left-color: var(--danger-color);
+        }
+        
+        .claim-item h5 {
+            margin: 0 0 5px 0;
+            font-size: 14px;
+        }
+        
+        .claim-item p {
+            margin: 0 0 5px 0;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .claim-item .meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #999;
+        }
 
-{% block content %}
-<div class="main-container">
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="sidebar-sticky">
-            <div class="sidebar-header">
-                <h4 class="logo">
-                    <i class="fas fa-leaf me-2"></i>CityCare
-                </h4>
-            </div>
+        /* Styles pour le KPI de géolocalisation */
+        .geo-kpi {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .geo-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .geo-circle::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.1) 100%);
+        }
+
+        .geo-circle .main-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .geo-circle .label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .geo-locations {
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .geo-location-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .geo-location-item:last-child {
+            border-bottom: none;
+        }
+
+        .geo-location-name {
+            font-weight: 500;
+        }
+
+        .geo-location-count {
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .kpi-card {
+                min-width: 100%;
+            }
             
-            <div class="sidebar-nav">
-                <ul>
-                    <li>
-                        <a class="active" href="{% url 'agent_dashboard' %}">
-                            <i class="fas fa-tachometer-alt me-2"></i> Dashboard
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{% url 'claims_list' %}">
-                            <i class="fas fa-list me-2"></i> Réclamations
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{% url 'claims_map' %}">
-                            <i class="fas fa-map-marked-alt me-2"></i> Carte interactive
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{% url 'stats' %}">
-                            <i class="fas fa-chart-bar me-2"></i> Statistiques
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{% url 'profile' %}">
-                            <i class="fas fa-user me-2"></i> Profil
-                        </a>
-                    </li>
-                    <li class="logout-item">
-                        <form action="{% url 'logout' %}" method="post" class="d-inline">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-link text-danger p-0" style="background:none;border:none;">
-                                <i class="fas fa-sign-out-alt me-2"></i> Déconnexion
-                            </button>
-                        </form>
-                    </li>
-                </ul>
-            </div>
+            .chart-container {
+                min-width: 100%;
+            }
             
-            <div class="sidebar-footer">
-                <div class="user-info">
-                    <i class="fas fa-user-circle"></i>
-                    <span>{{ request.user.username }}</span>
+            .claims-column {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-sticky">
+                <div class="sidebar-header">
+                    <h4 class="logo">
+                        <i class="fas fa-leaf me-2"></i>CityCare
+                    </h4>
+                </div>
+                
+                <div class="sidebar-nav">
+                    <ul>
+                        <li>
+                            <a class="active" href="{% url 'agent_dashboard' %}">
+                                <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'claims_list' %}">
+                                <i class="fas fa-list me-2"></i> Réclamations
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'claims_map' %}">
+                                <i class="fas fa-map-marked-alt me-2"></i> Carte interactive
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'stats' %}">
+                                <i class="fas fa-chart-bar me-2"></i> Statistiques
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'profile' %}">
+                                <i class="fas fa-user me-2"></i> Profil
+                            </a>
+                        </li>
+                        <li class="logout-item">
+                            <form action="{% url 'logout' %}" method="post" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-link text-danger p-0" style="background:none;border:none;">
+                                    <i class="fas fa-sign-out-alt me-2"></i> Déconnexion
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="sidebar-footer">
+                    <div class="user-info">
+                        <i class="fas fa-user-circle"></i>
+                        <span>{{ request.user.username }}</span>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Main Content -->
-    <div class="main-content">
-        <div class="container-fluid">
-            <h2 class="mb-4">Tableau de bord</h2>
-            
-            <!-- KPI Cards -->
-            <div class="kpi-container">
-                <div class="kpi-card kpi-pending">
-                    <h3>EN ATTENTE</h3>
-                    <p class="value">{{ pending_claims.count|default:"0" }}</p>
-                </div>
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="container-fluid">
+                <h2 class="mb-4">Tableau de bord</h2>
                 
-                <div class="kpi-card kpi-accepted">
-                    <h3>ACCEPTÉES</h3>
-                    <p class="value">{{ accepted_claims.count|default:"0" }}</p>
-                </div>
-                
-                <div class="kpi-card kpi-rejected">
-                    <h3>REJETÉES</h3>
-                    <p class="value">{{ rejected_claims.count|default:"0" }}</p>
-                </div>
-            </div>
-            
-            <!-- Charts Row -->
-            <div class="chart-row">
-                <!-- Graphique 1: Répartition par type de réclamation -->
-                <div class="chart-container">
-                    <h4><i class="fas fa-chart-bar me-2"></i>Répartition par type</h4>
-                    <div class="chart-wrapper">
-                        <canvas id="typeChart"></canvas>
+                <!-- KPI Cards -->
+                <div class="kpi-container">
+                    <div class="kpi-card kpi-pending">
+                        <h3>EN ATTENTE</h3>
+                        <p class="value">{{ pending_claims.count|default:"0" }}</p>
+                    </div>
+                    
+                    <div class="kpi-card kpi-accepted">
+                        <h3>ACCEPTÉES</h3>
+                        <p class="value">{{ accepted_claims.count|default:"0" }}</p>
+                    </div>
+                    
+                    <div class="kpi-card kpi-rejected">
+                        <h3>REJETÉES</h3>
+                        <p class="value">{{ rejected_claims.count|default:"0" }}</p>
                     </div>
                 </div>
                 
-                <!-- Graphique 2: Nombre d'utilisateurs par jour -->
-                <div class="chart-container">
-                    <h4><i class="fas fa-users me-2"></i>Utilisateurs actifs</h4>
-                    <div class="chart-wrapper">
-                        <canvas id="usersChart"></canvas>
+                <!-- Charts Row -->
+                <div class="chart-row">
+                    <!-- Graphique 1: Répartition par type de réclamation -->
+                    <div class="chart-container">
+                        <h4><i class="fas fa-chart-bar me-2"></i>Répartition par type</h4>
+                        <div class="chart-wrapper">
+                            <canvas id="typeChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Graphique 2: Nombre d'utilisateurs par jour -->
+                    <div class="chart-container">
+                        <h4><i class="fas fa-users me-2"></i>Utilisateurs actifs</h4>
+                        <div class="chart-wrapper">
+                            <canvas id="usersChart"></canvas>
+                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="chart-row">
-                <!-- Graphique 3: Lieux les plus fréquents -->
+                
+                <!-- KPI de géolocalisation -->
                 <div class="chart-container">
-                    <h4><i class="fas fa-map-marker-alt me-2"></i>Lieux les plus fréquents</h4>
-                    <div class="chart-wrapper">
-                        <canvas id="locationChart"></canvas>
+                    <h4><i class="fas fa-map-marker-alt me-2"></i>Zones à forte activité</h4>
+                    <div class="geo-kpi">
+                        <div class="geo-circle">
+                            <div class="main-value">{{ frequent_locations|length }}</div>
+                            <div class="label">Zones actives</div>
+                        </div>
+                        <div class="geo-locations">
+                            {% for location in frequent_locations %}
+                            <div class="geo-location-item">
+                                <span class="geo-location-name">{{ location.name }}</span>
+                                <span class="geo-location-count">{{ location.count }} réclamations</span>
+                            </div>
+                            {% empty %}
+                            <p class="text-muted">Aucune donnée de localisation disponible</p>
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Liste des réclamations -->
-            <div class="claims-container">
-                <!-- Réclamations en attente -->
-                <div class="claims-column">
-                    <div class="claims-list">
-                        <h4><i class="fas fa-clock me-2 text-warning"></i>Dernières en attente</h4>
-                        {% for claim in pending_claims|slice:":5" %}
-                        <div class="claim-item pending">
-                            <h5>{{ claim.title|truncatechars:30 }}</h5>
-                            <p>{{ claim.description|truncatechars:60 }}</p>
-                            <div class="meta">
-                                <span><i class="fas fa-clock"></i> {{ claim.created_at|timesince }}</span>
-                                <div>
-                                    <button class="btn btn-sm btn-success me-1" onclick="updateClaimStatus({{ claim.id }}, 'accepted')">
-                                        <i class="fas fa-check"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" onclick="updateClaimStatus({{ claim.id }}, 'rejected')">
-                                        <i class="fas fa-times"></i>
-                                    </button>
+                
+                <!-- Liste des réclamations -->
+                <div class="claims-container">
+                    <!-- Réclamations en attente -->
+                    <div class="claims-column">
+                        <div class="claims-list">
+                            <h4><i class="fas fa-clock me-2 text-warning"></i>Dernières en attente</h4>
+                            {% for claim in pending_claims|slice:":5" %}
+                            <div class="claim-item pending">
+                                <h5>{{ claim.title|truncatechars:30 }}</h5>
+                                <p>{{ claim.description|truncatechars:60 }}</p>
+                                <div class="meta">
+                                    <span><i class="fas fa-clock"></i> {{ claim.created_at|timesince }}</span>
+                                    <div>
+                                        <button class="btn btn-sm btn-success me-1" onclick="updateClaimStatus({{ claim.id }}, 'accepted')">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" onclick="updateClaimStatus({{ claim.id }}, 'rejected')">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
+                            {% empty %}
+                            <p class="text-muted">Aucune réclamation en attente</p>
+                            {% endfor %}
                         </div>
-                        {% empty %}
-                        <p class="text-muted">Aucune réclamation en attente</p>
-                        {% endfor %}
                     </div>
-                </div>
-                
-                <!-- Réclamations acceptées -->
-                <div class="claims-column">
-                    <div class="claims-list">
-                        <h4><i class="fas fa-check-circle me-2 text-success"></i>Dernières acceptées</h4>
-                        {% for claim in accepted_claims|slice:":5" %}
-                        <div class="claim-item accepted">
-                            <h5>{{ claim.title|truncatechars:30 }}</h5>
-                            <p>{{ claim.description|truncatechars:60 }}</p>
-                            <div class="meta">
-                                <span><i class="fas fa-check-circle"></i> {{ claim.updated_at|date:"d/m/Y" }}</span>
-                                <a href="{% url 'agent_claim_detail' claim.id %}" class="btn btn-sm btn-outline-secondary">
-                                    <i class="fas fa-eye"></i>
-                                </a>
+                    
+                    <!-- Réclamations acceptées -->
+                    <div class="claims-column">
+                        <div class="claims-list">
+                            <h4><i class="fas fa-check-circle me-2 text-success"></i>Dernières acceptées</h4>
+                            {% for claim in accepted_claims|slice:":5" %}
+                            <div class="claim-item accepted">
+                                <h5>{{ claim.title|truncatechars:30 }}</h5>
+                                <p>{{ claim.description|truncatechars:60 }}</p>
+                                <div class="meta">
+                                    <span><i class="fas fa-check-circle"></i> {{ claim.updated_at|date:"d/m/Y" }}</span>
+                                    <a href="{% url 'agent_claim_detail' claim.id %}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
                             </div>
+                            {% empty %}
+                            <p class="text-muted">Aucune réclamation acceptée</p>
+                            {% endfor %}
                         </div>
-                        {% empty %}
-                        <p class="text-muted">Aucune réclamation acceptée</p>
-                        {% endfor %}
                     </div>
-                </div>
-                
-                <!-- Réclamations rejetées -->
-                <div class="claims-column">
-                    <div class="claims-list">
-                        <h4><i class="fas fa-times-circle me-2 text-danger"></i>Dernières rejetées</h4>
-                        {% for claim in rejected_claims|slice:":5" %}
-                        <div class="claim-item rejected">
-                            <h5>{{ claim.title|truncatechars:30 }}</h5>
-                            <p>{{ claim.description|truncatechars:60 }}</p>
-                            <div class="meta">
-                                <span><i class="fas fa-times-circle"></i> {{ claim.updated_at|date:"d/m/Y" }}</span>
-                                <a href="{% url 'agent_claim_detail' claim.id %}" class="btn btn-sm btn-outline-secondary">
-                                    <i class="fas fa-eye"></i>
-                                </a>
+                    
+                    <!-- Réclamations rejetées -->
+                    <div class="claims-column">
+                        <div class="claims-list">
+                            <h4><i class="fas fa-times-circle me-2 text-danger"></i>Dernières rejetées</h4>
+                            {% for claim in rejected_claims|slice:":5" %}
+                            <div class="claim-item rejected">
+                                <h5>{{ claim.title|truncatechars:30 }}</h5>
+                                <p>{{ claim.description|truncatechars:60 }}</p>
+                                <div class="meta">
+                                    <span><i class="fas fa-times-circle"></i> {{ claim.updated_at|date:"d/m/Y" }}</span>
+                                    <a href="{% url 'agent_claim_detail' claim.id %}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
                             </div>
+                            {% empty %}
+                            <p class="text-muted">Aucune réclamation rejetée</p>
+                            {% endfor %}
                         </div>
-                        {% empty %}
-                        <p class="text-muted">Aucune réclamation rejetée</p>
-                        {% endfor %}
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-{% endblock %}
 
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // 1. Graphique des types de réclamation (barres)
-    const typeCtx = document.getElementById('typeChart');
-    
-    new Chart(typeCtx, {
-        type: 'bar',
-        data: {
-            labels: {{ type_labels|safe }},
-            datasets: [{
-                label: 'Nombre de réclamations',
-                data: {{ type_counts|safe }},
-                backgroundColor: 'rgba(30, 86, 49, 0.7)',
-                borderColor: 'rgba(30, 86, 49, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        precision: 0
-                    }
-                }
-            }
-        }
-    });
-
-    // 2. Graphique des utilisateurs actifs (courbe)
-    const usersCtx = document.getElementById('usersChart');
-    
-    new Chart(usersCtx, {
-        type: 'line',
-        data: {
-            labels: {{ dates|safe }},
-            datasets: [
-                {
-                    label: 'Nombre de citoyens actifs',
-                    data: {{ user_counts|safe }},
-                    borderColor: 'rgba(30, 86, 49, 1)',
-                    backgroundColor: 'rgba(30, 86, 49, 0.1)',
-                    fill: true,
-                    tension: 0.3
-                },
-                {
-                    label: 'Nombre de réclamations',
-                    data: {{ claim_counts|safe }},
-                    borderColor: 'rgba(76, 175, 80, 1)',
-                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                    fill: true,
-                    tension: 0.3
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        precision: 0
-                    }
-                }
-            }
-        }
-    });
-
-    // 3. Graphique des lieux fréquents (barres)
-    const locationCtx = document.getElementById('locationChart');
-    
-    new Chart(locationCtx, {
-        type: 'bar',
-        data: {
-            labels: {{ location_labels|safe }},
-            datasets: [{
-                label: 'Nombre de réclamations',
-                data: {{ location_counts|safe }},
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.7)',
-                    'rgba(54, 162, 235, 0.7)',
-                    'rgba(255, 206, 86, 0.7)',
-                    'rgba(75, 192, 192, 0.7)',
-                    'rgba(153, 102, 255, 0.7)'
-                ],
-                borderColor: [
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 206, 86, 1)',
-                    'rgba(75, 192, 192, 1)',
-                    'rgba(153, 102, 255, 1)'
-                ],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        precision: 0
-                    }
-                }
-            }
-        }
-    });
-
-    // Fonction pour mettre à jour le statut d'une réclamation
-    function updateClaimStatus(claimId, status) {
-        if (!confirm(`Voulez-vous vraiment ${status === 'accepted' ? 'accepter' : 'rejeter'} cette réclamation ?`)) return;
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. Graphique des types de réclamation (barres)
+        const typeCtx = document.getElementById('typeChart');
         
-        fetch(`{% url 'update_claim_status' 0 'status' %}`.replace('0', claimId).replace('status', status), {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': '{{ csrf_token }}',
-                'Content-Type': 'application/json',
+        new Chart(typeCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ type_labels|safe }},
+                datasets: [{
+                    label: 'Nombre de réclamations',
+                    data: {{ type_counts|safe }},
+                    backgroundColor: 'rgba(30, 86, 49, 0.7)',
+                    borderColor: 'rgba(30, 86, 49, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.location.reload();
-            } else {
-                alert(data.error || "Erreur lors de la mise à jour");
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert("Une erreur s'est produite");
         });
-    }
-});
-</script>
-{% endblock %}
+
+        // 2. Graphique des utilisateurs actifs (courbe)
+        const usersCtx = document.getElementById('usersChart');
+        
+        new Chart(usersCtx, {
+            type: 'line',
+            data: {
+                labels: {{ dates|safe }},
+                datasets: [
+                    {
+                        label: 'Nombre de citoyens actifs',
+                        data: {{ user_counts|safe }},
+                        borderColor: 'rgba(30, 86, 49, 1)',
+                        backgroundColor: 'rgba(30, 86, 49, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Nombre de réclamations',
+                        data: {{ claim_counts|safe }},
+                        borderColor: 'rgba(76, 175, 80, 1)',
+                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+
+        // Fonction pour mettre à jour le statut d'une réclamation
+        function updateClaimStatus(claimId, status) {
+            if (!confirm(`Voulez-vous vraiment ${status === 'accepted' ? 'accepter' : 'rejeter'} cette réclamation ?`)) return;
+            
+            fetch(`{% url 'update_claim_status' 0 'status' %}`.replace('0', claimId).replace('status', status), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.error || "Erreur lors de la mise à jour");
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert("Une erreur s'est produite");
+            });
+        }
+    });
+    </script>
+</body>
+</html>

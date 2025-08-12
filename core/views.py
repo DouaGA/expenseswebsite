@@ -104,7 +104,19 @@ def LogoutView(request):
 
 
 from django.db.models.functions import Cast
-
+from django.db.models import Func, FloatField
+class Round(Func):
+    function = 'ROUND'
+    template = '%(function)s(%(expressions)s, 2)'  # 2 décimales fixes
+    
+    def __init__(self, expression, **extra):
+        super().__init__(expression, output_field=FloatField(), **extra)
+    
+    def resolve_expression(self, query=None, allow_joins=True, reuse=None, summarize=False, for_save=False):
+        c = super().resolve_expression(query, allow_joins, reuse, summarize, for_save)
+        c.source_expressions = [c.source_expressions[0]]  # Ne garder que l'expression, pas la précision
+        return c
+    
 @login_required
 def agent_dashboard(request):
     claims = Claim.objects.all()
@@ -150,19 +162,15 @@ def agent_dashboard(request):
         Claim.objects
         .exclude(location_lat__isnull=True)
         .exclude(location_lng__isnull=True)
-        .annotate(
-            rounded_lat=Cast('location_lat', output_field=FloatField()),
-            rounded_lng=Cast('location_lng', output_field=FloatField())
-        )
-        .values('rounded_lat', 'rounded_lng')
+        .values('municipality__name')
         .annotate(count=Count('id'))
-        .order_by('-count')[:5]  # Top 5 des lieux les plus fréquents
+        .order_by('-count')[:5]
     )
     
-    # Préparer les données pour le graphique de localisation
-    location_labels = [f"Lieu {i+1}" for i in range(len(frequent_locations))]
-    location_counts = [loc['count'] for loc in frequent_locations]
-    
+    location_data = [
+        {'name': loc['municipality__name'] or "Zone inconnue", 'count': loc['count']}
+        for loc in frequent_locations
+    ]
     context = {
         'total_claims': claims.count(),
         'pending_claims': claims.filter(status=Claim.PENDING),
@@ -173,9 +181,9 @@ def agent_dashboard(request):
         'claim_counts': json.dumps(claim_counts),
         'type_labels': json.dumps(type_labels),
         'type_counts': json.dumps(type_counts),
-        'location_labels': json.dumps(location_labels),
-        'location_counts': json.dumps(location_counts),
-    }
+        'frequent_locations': location_data,  # Utilisez les données préparées
+
+        }
     return render(request, 'core/agent_dashboard.html', context)
 
 @login_required
@@ -582,18 +590,3 @@ def api_claims(request):
     
     return JsonResponse(claims_data, safe=False)
 
-from django.db.models import Func, FloatField
-
-class Round(Func):
-    function = 'ROUND'
-    template = 'ROUND(CAST(%(expressions)s AS numeric), %(precision)s)'
-    
-    def __init__(self, expression, precision=0, **extra):
-        expressions = [expression, precision]
-        super().__init__(*expressions, output_field=FloatField(), **extra)
-    
-    def resolve_expression(self, *args, **kwargs):
-        # S'assure que la précision est traitée comme une valeur littérale
-        copy = self.copy()
-        copy.source_expressions[1] = copy.source_expressions[1].resolve_expression(*args, **kwargs)
-        return super(Round, copy).resolve_expression(*args, **kwargs)

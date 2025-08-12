@@ -2,37 +2,125 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 <style>
     :root {
-        --primary-color: #4361ee;
-        --secondary-color: #3f37c9;
-        --accent-color: #4895ef;
-        --dark-color: #2b2d42;
+        --primary-color: #1e5631;
+        --secondary-color: #4CAF50;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
+        --info-color: #17a2b8;
         --light-color: #f8f9fa;
-        --success-color: #4cc9f0;
-        --warning-color: #f8961e;
-        --danger-color: #f72585;
+        --dark-color: #343a40;
+        --sidebar-width: 350px;
+        --transition-speed: 0.3s;
     }
     
+    /* Base Styles */
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f5f5f5;
+        color: #333;
+        line-height: 1.6;
+    }
+    
+    /* Main Layout */
+    .main-container {
+        display: flex;
+        min-height: 100vh;
+    }
+    
+    .sidebar {
+        width: var(--sidebar-width);
+        height: 100vh;
+        background: var(--primary-color);
+        color: #ecf0f1;
+        position: fixed;
+        left: 0;
+        top: 0;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        z-index: 1000;
+        transition: transform var(--transition-speed) ease;
+    }
+    
+    .main-content {
+        margin-left: var(--sidebar-width);
+        width: calc(100% - var(--sidebar-width));
+        transition: margin-left var(--transition-speed) ease, width var(--transition-speed) ease;
+    }
+    
+    /* Sidebar Styles */
+    .sidebar-header {
+        padding: 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .logo {
+        color: white;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    .sidebar-nav {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px 0;
+    }
+    
+    .sidebar-nav ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .sidebar-nav li a {
+        display: block;
+        padding: 12px 20px;
+        color: rgba(255,255,255,0.8);
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    
+    .sidebar-nav li a:hover,
+    .sidebar-nav li a.active {
+        background-color: rgba(255,255,255,0.1);
+        color: white;
+    }
+    
+    .sidebar-nav li a i {
+        width: 20px;
+        margin-right: 10px;
+        text-align: center;
+    }
+    
+    .sidebar-footer {
+        padding: 15px 20px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .user-info {
+        display: flex;
+        align-items: center;
+        color: white;
+    }
+    
+    .user-info i {
+        margin-right: 10px;
+        font-size: 1.2rem;
+    }
+    
+    /* Map Container */
     #map-container {
-        height: calc(100vh - 120px);
+        height: calc(100vh - 60px);
         width: 100%;
         position: relative;
-        display: flex;
     }
     
     #map {
         height: 100%;
-        flex: 1;
-    }
-    
-    .sidebar {
-        width: 350px;
-        background: white;
-        border-right: 1px solid #ddd;
-        overflow-y: auto;
-        padding: 15px;
+        width: 100%;
     }
     
     .filter-panel {
@@ -47,6 +135,7 @@
         width: 300px;
     }
     
+    /* Claim Markers */
     .claim-marker {
         background-color: var(--primary-color);
         border-radius: 50%;
@@ -66,13 +155,14 @@
     }
     
     .accepted {
-        background-color: var(--success-color);
+        background-color: var(--secondary-color);
     }
     
     .rejected {
         background-color: var(--danger-color);
     }
     
+    /* Popup Styles */
     .leaflet-popup-content {
         min-width: 250px;
     }
@@ -92,6 +182,7 @@
         width: 100px;
     }
     
+    /* Status Badges */
     .status-badge {
         padding: 3px 8px;
         border-radius: 12px;
@@ -106,7 +197,7 @@
     }
     
     .badge-accepted {
-        background-color: var(--success-color);
+        background-color: var(--secondary-color);
         color: white;
     }
     
@@ -115,8 +206,9 @@
         color: white;
     }
     
+    /* Claim Items */
     .claim-item {
-        padding: 10px;
+        padding: 10px 15px;
         margin-bottom: 10px;
         border-radius: 5px;
         border-left: 4px solid var(--primary-color);
@@ -131,7 +223,7 @@
     }
     
     .claim-item.active {
-        border-left-color: var(--accent-color);
+        border-left-color: var(--info-color);
         background: #e7f1ff;
     }
     
@@ -153,100 +245,212 @@
         border-radius: 10px;
     }
     
-    .sidebar-header {
-        padding: 10px 15px;
-        border-bottom: 1px solid #ddd;
-        margin-bottom: 15px;
+    /* Header Styles */
+    .page-header {
+        background-color: white;
+        padding: 15px 20px;
+        border-bottom: 1px solid #dee2e6;
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
     
-    .sidebar-header h3 {
+    .page-header h1 {
         margin: 0;
-        font-size: 1.2rem;
+        font-size: 1.5rem;
+        color: var(--primary-color);
+    }
+    
+    /* Form Styles */
+    .form-select {
+        padding: 8px 12px;
+        border-radius: 4px;
+        border: 1px solid #ced4da;
+        width: 100%;
+    }
+    
+    .btn {
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-weight: 500;
+        transition: all 0.2s;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .btn-primary {
+        background-color: var(--primary-color);
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background-color: #164325;
+    }
+    
+    /* Mobile Toggle Button */
+    #sidebarToggle {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 1050;
+        display: none;
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        transition: all 0.3s;
+    }
+    
+    #sidebarToggle:hover {
+        background-color: #164325;
+    }
+    
+    @media (max-width: 992px) {
+        .sidebar {
+            transform: translateX(-100%);
+        }
+        
+        .sidebar.active {
+            transform: translateX(0);
+        }
+        
+        .main-content {
+            margin-left: 0;
+            width: 100%;
+        }
+        
+        #sidebarToggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .filter-panel {
+            width: 250px;
+            right: 10px;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid px-0">
-    <div class="d-flex justify-content-between align-items-center py-3 px-4 border-bottom">
-        <h1 class="h3 mb-0">
-            <i class="fas fa-map-marked-alt me-2"></i>Carte des Réclamations
-        </h1>
-    </div>
-
-    <div id="map-container">
-        <div class="sidebar">
+<div class="main-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-sticky">
             <div class="sidebar-header">
-                <h3><i class="fas fa-list me-2"></i>Liste des Réclamations</h3>
-                <span class="badge bg-primary">{{ claims|length }}</span>
+                <h4 class="logo">
+                    <i class="fas fa-leaf me-2"></i>CityCare
+                </h4>
             </div>
             
-            <div id="claims-list">
-                {% for claim in claims %}
-                <div class="claim-item" data-claim-id="{{ claim.id }}" data-lat="{{ claim.location_lat }}" data-lng="{{ claim.location_lng }}">
-                    <div class="title">{{ claim.title|truncatechars:40 }}</div>
-                    <div class="meta">
-                        <span>{{ claim.municipality.name|default:"N/A" }}</span>
-                        <span class="status badge-{{ claim.status }}">
-                            {{ claim.get_status_display }}
-                        </span>
-                    </div>
-                    <div class="meta">
-                        <span>{{ claim.created_at|date:"d/m/Y" }}</span>
-                        <span>{{ claim.claim_type.name|default:"N/A" }}</span>
-                    </div>
+            <div class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="{% url 'agent_dashboard' %}">
+                            <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'claims_list' %}">
+                            <i class="fas fa-list me-2"></i> Réclamations
+                        </a>
+                    </li>
+                    <li>
+                        <a class="active" href="{% url 'claims_map' %}">
+                            <i class="fas fa-map-marked-alt me-2"></i> Carte interactive
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'stats' %}">
+                            <i class="fas fa-chart-bar me-2"></i> Statistiques
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'profile' %}">
+                            <i class="fas fa-user me-2"></i> Profil
+                        </a>
+                    </li>
+                    <li class="logout-item">
+                        <form action="{% url 'logout' %}" method="post" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-link text-danger p-0" style="background:none;border:none;">
+                                <i class="fas fa-sign-out-alt me-2"></i> Déconnexion
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <i class="fas fa-user-circle"></i>
+                    <span>{{ request.user.username }}</span>
                 </div>
-                {% empty %}
-                <div class="text-center py-4 text-muted">
-                    Aucune réclamation trouvée
-                </div>
-                {% endfor %}
             </div>
         </div>
-        
-        <div id="map"></div>
-        
-        <div class="filter-panel">
-            <h5 class="mb-3"><i class="fas fa-filter me-2"></i>Filtres</h5>
-            
-            <div class="mb-3">
-                <label class="form-label">Type de réclamation</label>
-                <select class="form-select" id="type-filter">
-                    <option value="all">Tous types</option>
-                    <option value="Trottoir dégradé ou impraticable">Trottoir dégradé</option>
-                    <option value="Espaces verts non entretenus">Espaces verts</option>
-                    <option value="Éclairage insuffisant dans une zone">Éclairage</option>
-                    <option value="Dégradation d'un bâtiment public">Bâtiment public</option>
-                    <option value="Clôture ou mur endommagé">Clôture/Mur</option>
-                </select>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Mobile Toggle Button -->
+        <button class="btn" id="sidebarToggle" aria-label="Toggle sidebar">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <div class="container-fluid px-0">
+            <div class="page-header">
+                <h1>
+                    <i class="fas fa-map-marked-alt me-2"></i>Carte des Réclamations
+                </h1>
             </div>
-            
-            <div class="mb-3">
-                <label class="form-label">Statut</label>
-                <select class="form-select" id="status-filter">
-                    <option value="all">Tous statuts</option>
-                    <option value="pending">En attente</option>
-                    <option value="accepted">Accepté</option>
-                    <option value="rejected">Rejeté</option>
-                </select>
+
+            <div id="map-container">
+                <div id="map"></div>
+                
+                <div class="filter-panel">
+                    <h5 class="mb-3"><i class="fas fa-filter me-2"></i>Filtres</h5>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Type de réclamation</label>
+                        <select class="form-select" id="type-filter">
+                            <option value="all">Tous types</option>
+                            <option value="Trottoir dégradé ou impraticable">Trottoir dégradé</option>
+                            <option value="Espaces verts non entretenus">Espaces verts</option>
+                            <option value="Éclairage insuffisant dans une zone">Éclairage</option>
+                            <option value="Dégradation d'un bâtiment public">Bâtiment public</option>
+                            <option value="Clôture ou mur endommagé">Clôture/Mur</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Statut</label>
+                        <select class="form-select" id="status-filter">
+                            <option value="all">Tous statuts</option>
+                            <option value="pending">En attente</option>
+                            <option value="accepted">Accepté</option>
+                            <option value="rejected">Rejeté</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Municipalité</label>
+                        <select class="form-select" id="municipality-filter">
+                            <option value="all">Toutes municipalités</option>
+                            {% for municipality in municipalities %}
+                            <option value="{{ municipality.id }}">{{ municipality.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <button id="apply-filters" class="btn btn-primary w-100">
+                        <i class="fas fa-sync-alt me-2"></i>Appliquer
+                    </button>
+                </div>
             </div>
-            
-            <div class="mb-3">
-                <label class="form-label">Municipalité</label>
-                <select class="form-select" id="municipality-filter">
-                    <option value="all">Toutes municipalités</option>
-                    {% for municipality in municipalities %}
-                    <option value="{{ municipality.id }}">{{ municipality.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <button id="apply-filters" class="btn btn-primary w-100">
-                <i class="fas fa-sync-alt me-2"></i>Appliquer
-            </button>
         </div>
     </div>
 </div>
@@ -256,6 +460,31 @@
 <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Sidebar Toggle for Mobile
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebar = document.querySelector('.sidebar');
+    
+    sidebarToggle.addEventListener('click', function() {
+        sidebar.classList.toggle('active');
+        const isOpen = sidebar.classList.contains('active');
+        sidebarToggle.setAttribute('aria-expanded', isOpen);
+        sidebarToggle.innerHTML = isOpen ? 
+            '<i class="fas fa-times"></i>' : 
+            '<i class="fas fa-bars"></i>';
+    });
+
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', function(event) {
+        if (window.innerWidth <= 992 && 
+            !sidebar.contains(event.target) && 
+            !sidebarToggle.contains(event.target) && 
+            sidebar.classList.contains('active')) {
+            sidebar.classList.remove('active');
+            sidebarToggle.setAttribute('aria-expanded', 'false');
+            sidebarToggle.innerHTML = '<i class="fas fa-bars"></i>';
+        }
+    });
+
     // Initialisation de la carte
     const map = L.map('map').setView([36.7525, 3.0420], 12);
     
@@ -317,9 +546,6 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (!Array.isArray(data)) throw new Error('Données invalides');
                 allClaims = data;
-                
-                // Mettre à jour la sidebar
-                updateSidebar(data);
                 
                 data.forEach(claim => {
                     if (!claim.location_lat || !claim.location_lng) return;
@@ -383,51 +609,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    // Mettre à jour la sidebar avec les réclamations
-    function updateSidebar(claims) {
-        const claimsList = document.getElementById('claims-list');
-        claimsList.innerHTML = '';
-        
-        if (claims.length === 0) {
-            claimsList.innerHTML = `
-                <div class="text-center py-4 text-muted">
-                    Aucune réclamation trouvée
-                </div>
-            `;
-            return;
-        }
-        
-        claims.forEach(claim => {
-            const claimItem = document.createElement('div');
-            claimItem.className = `claim-item ${activeClaimId === claim.id ? 'active' : ''}`;
-            claimItem.dataset.claimId = claim.id;
-            claimItem.dataset.lat = claim.location_lat;
-            claimItem.dataset.lng = claim.location_lng;
-            
-            claimItem.innerHTML = `
-                <div class="title">${claim.title ? claim.title.substring(0, 40) + (claim.title.length > 40 ? '...' : '') : 'Sans titre'}</div>
-                <div class="meta">
-                    <span>${claim.municipality ? claim.municipality : 'N/A'}</span>
-                    <span class="status badge-${claim.status}">
-                        ${claim.status}
-                    </span>
-                </div>
-                <div class="meta">
-                    <span>${new Date(claim.created_at).toLocaleDateString()}</span>
-                    <span>${claim.claim_type ? claim.claim_type : 'N/A'}</span>
-                </div>
-            `;
-            
-            claimItem.addEventListener('click', function() {
-                highlightClaimInSidebar(claim.id);
-                centerMapOnClaim(claim);
-                openPopupForClaim(claim.id);
-            });
-            
-            claimsList.appendChild(claimItem);
-        });
-    }
-
     // Centrer la carte sur une réclamation
     function centerMapOnClaim(claim) {
         if (claim.location_lat && claim.location_lng) {
@@ -450,9 +631,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Mettre en surbrillance une réclamation dans la sidebar
     function highlightClaimInSidebar(claimId) {
         activeClaimId = claimId;
-        document.querySelectorAll('.claim-item').forEach(item => {
-            item.classList.toggle('active', item.dataset.claimId === claimId.toString());
-        });
     }
 
     // Appliquer les filtres
